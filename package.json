@@ -1,0 +1,31 @@
+{
+  "name": "@ywwwtseng/wallet-kit",
+  "description": "a wallet kit for react",
+  "version": "0.1.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "@types/react": ">=18.0.0",
+    "@ywwwtseng/react-kit": "github:ywwwtseng/react-kit",
+    "@ywwwtseng/web3": "github:ywwwtseng/web3",
+    "react": ">=18.0.0"
+  },
+  "dependencies": {
+    "@reown/appkit": "^1.8.15",
+    "@reown/appkit-adapter-solana": "^1.8.15",
+    "@reown/appkit-adapter-wagmi": "^1.8.15",
+    "@tanstack/react-query": "^5.90.12",
+    "@wagmi/core": "^3.0.0",
+    "viem": "2.x",
+    "wagmi": "^2.8.1"
+  }
+}
