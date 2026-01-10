@@ -17,7 +17,7 @@ import {
 } from '@reown/appkit/react';
 import { type Provider } from '@reown/appkit-adapter-solana';
 import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
-import { WalletKitContext } from './WalletKitContext';
+import { WalletKitContext } from './WalletKitProvider';
 import * as web3 from '@ywwwtseng/web3';
 import { useSwitchChain, useAccount, useChainId } from 'wagmi';
 import type { Address } from 'viem';

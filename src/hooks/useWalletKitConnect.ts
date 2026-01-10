@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { WalletKitConnectContext } from '../WalletKitConnectContext';
+import { WalletKitConnectContext } from '../WalletKitConnectProvider';
 
 export function useWalletKitConnect() {
   const context = use(WalletKitConnectContext);

@@ -11,7 +11,7 @@ var Status = /* @__PURE__ */ ((Status2) => {
 var JWT_TOKEN_KEY = "web3_jwt_token";
 var JWT_ADDRESS_KEY = "web3_jwt_address";
 
-// src/WalletKitAuthContext.tsx
+// src/WalletKitAuthProvider.tsx
 import { useCallback as useCallback2, useEffect, useState as useState2, useMemo, createContext, useRef } from "react";
 import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import { signMessage } from "wagmi/actions";
@@ -85,6 +85,7 @@ var sendWagmiTransaction = async (config3, {
 };
 
 // src/utils.ts
+import { cookieStorage, createStorage } from "@wagmi/core";
 import { createAppKit as createReownAppKit } from "@reown/appkit/react";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { SolanaAdapter } from "@reown/appkit-adapter-solana";
@@ -104,6 +105,7 @@ var createAppKit = /* @__PURE__ */ (() => {
     themeMode,
     projectId,
     networks,
+    ssr = false,
     ...config3
   }) => {
     if (instance) {
@@ -112,7 +114,12 @@ var createAppKit = /* @__PURE__ */ (() => {
     const wagmiAdapter = new WagmiAdapter({
       projectId,
       networks,
-      ssr: true
+      ssr,
+      ...ssr ? {
+        storage: createStorage({
+          storage: cookieStorage
+        })
+      } : {}
     });
     const solanaAdapter = new SolanaAdapter();
     const modal = createReownAppKit({
@@ -208,7 +215,7 @@ function isJWTExpired(token) {
   }
 }
 
-// src/WalletKitAuthContext.tsx
+// src/WalletKitAuthProvider.tsx
 import { jsx } from "react/jsx-runtime";
 var WalletKitAuthContext = createContext({
   signIn: () => {
@@ -408,15 +415,15 @@ var WalletKitAuthProvider = ({
   return /* @__PURE__ */ jsx(WalletKitAuthContext.Provider, { value, children: typeof children === "function" ? children(value) : children });
 };
 
-// src/WalletKitContext.tsx
+// src/WalletKitProvider.tsx
 import {
   useMemo as useMemo4,
   createContext as createContext3
 } from "react";
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, cookieToInitialState } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// src/WalletKitConnectContext.tsx
+// src/WalletKitConnectProvider.tsx
 import {
   use,
   useState as useState3,
@@ -598,7 +605,7 @@ function useAccounts() {
   }, [solanaAccount, ethersAccount]);
 }
 
-// src/WalletKitConnectContext.tsx
+// src/WalletKitConnectProvider.tsx
 import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 function clearLocalStorageByPrefix(prefix) {
   Object.keys(localStorage).forEach((key) => {
@@ -863,7 +870,7 @@ var WalletKitConnectProvider = ({
   ] });
 };
 
-// src/WalletKitContext.tsx
+// src/WalletKitProvider.tsx
 import { jsx as jsx4 } from "react/jsx-runtime";
 var queryClient = new QueryClient();
 var WalletKitContext = createContext3({
@@ -871,10 +878,12 @@ var WalletKitContext = createContext3({
 });
 var WalletKitProvider = ({
   config: config3,
+  cookies,
   logo,
   children,
   getWalletInfo
 }) => {
+  const initialState = cookieToInitialState(config3, cookies);
   const value = useMemo4(
     () => ({
       getWalletInfo
@@ -883,7 +892,7 @@ var WalletKitProvider = ({
       getWalletInfo
     ]
   );
-  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config: config3, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { logo, children }) }) }) });
+  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config: config3, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { logo, children }) }) }) });
 };
 
 // src/hooks/useWalletKitConnect.ts

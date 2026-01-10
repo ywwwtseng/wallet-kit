@@ -1,3 +1,4 @@
+import { cookieStorage, createStorage } from '@wagmi/core';
 import { createAppKit as createReownAppKit, type CreateAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana';
@@ -27,11 +28,13 @@ export const createAppKit = (() => {
     themeMode,
     projectId,
     networks,
+    ssr = false,
     ...config
   }: {
     themeMode?: 'light' | 'dark';
     projectId: string;
     networks: [AppKitNetwork, ...AppKitNetwork[]];
+    ssr: boolean;
   } & CreateAppKit) => {
     // 如果已经创建了实例，直接返回
     if (instance) {
@@ -41,7 +44,12 @@ export const createAppKit = (() => {
     const wagmiAdapter = new WagmiAdapter({
       projectId,
       networks,
-      ssr: true,
+      ssr,
+      ...(ssr ? {
+        storage: createStorage({
+          storage: cookieStorage
+        }),
+      } : {})
     });
 
     const solanaAdapter = new SolanaAdapter();

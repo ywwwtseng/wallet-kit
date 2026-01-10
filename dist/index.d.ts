@@ -50,8 +50,9 @@ interface WalletKitContextType {
     getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }
 declare const WalletKitContext: react.Context<WalletKitContextType>;
-declare const WalletKitProvider: ({ config, logo, children, getWalletInfo, }: {
+declare const WalletKitProvider: ({ config, cookies, logo, children, getWalletInfo, }: {
     config: typeof WagmiAdapter.prototype.wagmiConfig;
+    cookies?: string | null;
     logo: React.ReactNode;
     children: React.ReactNode;
     getWalletInfo?: () => ConnectedWalletInfo | undefined;
@@ -104,10 +105,11 @@ interface AuthenticatedGuardProps {
 declare function AuthenticatedGuard({ redirectTo, children }: AuthenticatedGuardProps): react.ReactNode;
 
 declare const parseJSON: (src: unknown) => unknown;
-declare const createAppKit: ({ themeMode, projectId, networks, ...config }: {
+declare const createAppKit: ({ themeMode, projectId, networks, ssr, ...config }: {
     themeMode?: "light" | "dark";
     projectId: string;
     networks: [AppKitNetwork, ...AppKitNetwork[]];
+    ssr: boolean;
 } & CreateAppKit) => {
     config: typeof WagmiAdapter.prototype.wagmiConfig;
     getWalletInfo: () => ReturnType<ReturnType<typeof createAppKit$1>["getWalletInfo"]>;

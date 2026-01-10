@@ -7,11 +7,11 @@ import {
   useMemo,
   createContext,
 } from 'react';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, cookieToInitialState } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import type { ConnectedWalletInfo } from '@reown/appkit';
-import { WalletKitConnectProvider } from './WalletKitConnectContext';
+import { WalletKitConnectProvider } from './WalletKitConnectProvider';
 import type { AppKitNetwork } from './types';
 
 // AppKit 配置类型（允许部分覆盖）
@@ -34,15 +34,19 @@ export const WalletKitContext = createContext<WalletKitContextType>({
 
 export const WalletKitProvider = ({
   config,
+  cookies,
   logo,
   children,
   getWalletInfo,
 }: {
   config: typeof WagmiAdapter.prototype.wagmiConfig;
+  cookies?: string | null;
   logo: React.ReactNode;
   children: React.ReactNode;
   getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }) => {
+  const initialState = cookieToInitialState(config, cookies);
+
   const value = useMemo(
     () => ({
       getWalletInfo,
@@ -54,7 +58,7 @@ export const WalletKitProvider = ({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config}>
+      <WagmiProvider config={config} initialState={initialState}>
         <WalletKitContext.Provider value={value}>
           <WalletKitConnectProvider logo={logo}>
             {children}
