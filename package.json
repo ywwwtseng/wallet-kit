@@ -7,7 +7,12 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean"
+    "build": "tsup src/index.ts src/networks.ts src/utils.ts --format esm --dts --clean"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./networks": "./dist/networks.js",
+    "./utils": "./dist/utils.js"
   },
   "devDependencies": {
     "tsup": "^8.5.0",

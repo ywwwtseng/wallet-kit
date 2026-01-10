@@ -2,10 +2,11 @@ import { AppKitNetwork } from '@reown/appkit/networks';
 export { AppKitNetwork, bsc, mainnet, solana } from '@reown/appkit/networks';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import * as react from 'react';
-import { Views, CreateAppKit, createAppKit as createAppKit$1 } from '@reown/appkit/react';
+import { Views } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ConnectedWalletInfo } from '@reown/appkit';
 import * as web3 from '@ywwwtseng/web3';
+export { clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT } from './utils.js';
 
 type Token = {
     id: string;
@@ -104,46 +105,4 @@ interface AuthenticatedGuardProps {
 }
 declare function AuthenticatedGuard({ redirectTo, children }: AuthenticatedGuardProps): react.ReactNode;
 
-declare const parseJSON: (src: unknown) => unknown;
-declare const createAppKit: ({ themeMode, projectId, networks, ssr, ...config }: {
-    themeMode?: "light" | "dark";
-    projectId: string;
-    networks: [AppKitNetwork, ...AppKitNetwork[]];
-    ssr: boolean;
-} & CreateAppKit) => {
-    config: typeof WagmiAdapter.prototype.wagmiConfig;
-    getWalletInfo: () => ReturnType<ReturnType<typeof createAppKit$1>["getWalletInfo"]>;
-};
-/**
- * 从后端获取签名消息和 nonce
- */
-declare function getSignMessage(url: string, address: string): Promise<{
-    message: string;
-    nonce: string;
-    expiresAt: number;
-}>;
-/**
- * 获取存储的 JWT token
- */
-declare function getStoredJWT(appKey: string): {
-    token: string;
-    address: string;
-} | null;
-/**
- * 存储 JWT token
- */
-declare function storeJWT(appKey: string, token: string, address: string): void;
-/**
- * 清除存储的 JWT token
- */
-declare function clearStoredJWT(appKey: string): void;
-/**
- * 获取 JWT token 的过期时间（毫秒）
- */
-declare function getJWTExpirationTime(token: string): number | null;
-/**
- * 检查 JWT token 是否过期
- */
-declare function isJWTExpired(token: string): boolean;
-
-export { type AppKitConfig, AuthenticatedGuard, JWT_ADDRESS_KEY, JWT_TOKEN_KEY, Status, type Token, WalletKitAuthContext, type WalletKitAuthContextState, WalletKitAuthProvider, WalletKitContext, WalletKitProvider, clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT, useConnect, useWalletKitAuth, useWalletKitConnect };
+export { type AppKitConfig, AuthenticatedGuard, JWT_ADDRESS_KEY, JWT_TOKEN_KEY, Status, type Token, WalletKitAuthContext, type WalletKitAuthContextState, WalletKitAuthProvider, WalletKitContext, WalletKitProvider, useConnect, useWalletKitAuth, useWalletKitConnect };
