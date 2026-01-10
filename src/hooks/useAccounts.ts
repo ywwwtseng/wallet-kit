@@ -7,10 +7,10 @@ export function useAccounts() {
 
   return useMemo(() => {
     return {
-      status: solanaAccount.status,
-      solana: solanaAccount.address,
+      status: ethersAccount.status,
       bsc: ethersAccount.address,
       ethereum: ethersAccount.address,
+      solana: solanaAccount.address,
     };
   }, [solanaAccount, ethersAccount]);
 }

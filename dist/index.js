@@ -472,10 +472,10 @@ function useAccounts() {
   const ethersAccount = useAppKitAccount2({ namespace: "eip155" });
   return useMemo2(() => {
     return {
-      status: solanaAccount.status,
-      solana: solanaAccount.address,
+      status: ethersAccount.status,
       bsc: ethersAccount.address,
-      ethereum: ethersAccount.address
+      ethereum: ethersAccount.address,
+      solana: solanaAccount.address
     };
   }, [solanaAccount, ethersAccount]);
 }
