@@ -53,6 +53,11 @@ var createAppKit = /* @__PURE__ */ (() => {
       projectId,
       networks,
       adapters: [wagmiAdapter, solanaAdapter],
+      features: {
+        email: false,
+        socials: [],
+        analytics: false
+      },
       ...config
     });
     instance = {

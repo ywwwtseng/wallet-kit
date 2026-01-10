@@ -15,7 +15,7 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-WLCW25LG.js";
+} from "./chunk-VVSAMDQD.js";
 
 // src/WalletKitAuthProvider.tsx
 import { useCallback as useCallback2, useEffect, useState as useState2, useMemo, createContext, useRef } from "react";
@@ -67,14 +67,14 @@ var config = createConfig({
     [bsc2.id]: http()
   }
 });
-var sendWagmiTransaction = async (config3, {
+var sendWagmiTransaction = async (config2, {
   tokenAddress,
   to,
   amount,
   chainId
 }) => {
   if (tokenAddress) {
-    return await writeContract(config3, {
+    return await writeContract(config2, {
       address: tokenAddress,
       abi: ERC20_ABI,
       functionName: "transfer",
@@ -82,7 +82,7 @@ var sendWagmiTransaction = async (config3, {
       args: [to, typeof amount === "string" ? BigInt(amount) : amount]
     });
   } else {
-    return await sendTransaction(config3, {
+    return await sendTransaction(config2, {
       to,
       value: typeof amount === "string" ? BigInt(amount) : amount,
       chainId
@@ -117,7 +117,7 @@ var WalletKitAuthProvider = ({
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
   const ethersAccount = useAppKitAccount({ namespace: "eip155" });
-  const config3 = useConfig();
+  const config2 = useConfig();
   const [initialized, setInitialized] = useState2(false);
   const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState2(false);
   const [isSigningInProcessing, setIsSigningInProcessing] = useState2(false);
@@ -135,7 +135,7 @@ var WalletKitAuthProvider = ({
         throw error;
       }
     },
-    [open, ethersAccount.address, config3]
+    [open, ethersAccount.address, config2]
   );
   const signOut = useCallback2(async () => {
     setIsLoggingOutProcessing(true);
@@ -222,10 +222,10 @@ var WalletKitAuthProvider = ({
           }
           setIsSigningInProcessing(true);
           const { message, nonce } = await getSignMessage(url, ethersAccount.address);
-          if (!config3) {
+          if (!config2) {
             throw new Error("Wagmi config not available");
           }
-          const signature = await signMessage(config3, {
+          const signature = await signMessage(config2, {
             message,
             account: ethersAccount.address
           });
@@ -492,6 +492,7 @@ function clearLocalStorageByPrefix(prefix) {
 var WalletKitConnectContext = createContext2({
   isConnectPending: false,
   isSendTxPending: false,
+  error: null,
   accounts: {
     status: void 0,
     solana: void 0,
@@ -503,8 +504,8 @@ var WalletKitConnectContext = createContext2({
   getBalance: () => {
     throw new Error("getBalance is not implemented");
   },
-  open: () => {
-    throw new Error("open is not implemented");
+  connect: () => {
+    throw new Error("connect is not implemented");
   },
   disconnect: () => {
     throw new Error("disconnect is not implemented");
@@ -523,6 +524,7 @@ var WalletKitConnectProvider = ({
   logo,
   children
 }) => {
+  const [connectError, setConnectError] = useState3(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState3({});
   const [continueInWalletModal, openContinueInWalletModal] = useState3(false);
@@ -534,9 +536,16 @@ var WalletKitConnectProvider = ({
   const { switchChainAsync } = useSwitchChain();
   const { isConnected: isEVMConnected } = useAccount();
   const currentChainId = useChainId();
-  const config3 = useConfig();
+  const config2 = useConfig();
   const solanaProvider = useAppKitProvider("solana");
   const { open, isPending: isConnectPending } = useConnect();
+  const connect = useCallback3(async (options) => {
+    try {
+      await open(options?.view);
+    } catch (error) {
+      setConnectError(error instanceof Error ? error : new Error(String(error)));
+    }
+  }, [open]);
   const switchNetwork = async (network) => {
     if (network === "bsc") {
       await switchAppKitNetwork(bsc);
@@ -562,7 +571,7 @@ var WalletKitConnectProvider = ({
       if (!connection || !accounts.ethereum) {
         return;
       }
-      const balance2 = await getBalance(config3, {
+      const balance2 = await getBalance(config2, {
         address: accounts.ethereum,
         token: token.token_address ?? void 0,
         chainId: bsc.id
@@ -572,7 +581,7 @@ var WalletKitConnectProvider = ({
       if (!connection || !accounts.ethereum) {
         return;
       }
-      const balance2 = await getBalance(config3, {
+      const balance2 = await getBalance(config2, {
         address: accounts.ethereum,
         token: token.token_address ?? void 0,
         chainId: mainnet.id
@@ -664,7 +673,6 @@ var WalletKitConnectProvider = ({
           }),
           connection
         );
-        console.log("signature", signature);
         return signature;
       }
       if (!isEVMConnected || !accounts.ethereum) {
@@ -681,7 +689,7 @@ var WalletKitConnectProvider = ({
       if (currentChainId !== chainId) {
         await switchChainAsync({ chainId });
       }
-      return await sendWagmiTransaction(config3, {
+      return await sendWagmiTransaction(config2, {
         tokenAddress: token.token_address,
         to: destination,
         amount: typeof amount === "string" ? BigInt(amount) : amount,
@@ -701,7 +709,8 @@ var WalletKitConnectProvider = ({
       balance,
       isConnectPending,
       isSendTxPending,
-      open,
+      error: connectError,
+      connect,
       getBalance: getBalance3,
       currentChainId,
       disconnect: async (clearLocalStorage) => {
@@ -721,7 +730,7 @@ var WalletKitConnectProvider = ({
       isConnectPending,
       isSendTxPending,
       currentChainId,
-      open,
+      connect,
       getBalance3,
       disconnect,
       signTransaction,
@@ -752,13 +761,13 @@ var WalletKitContext = createContext3({
   getWalletInfo: () => void 0
 });
 var WalletKitProvider = ({
-  config: config3,
+  config: config2,
   cookies,
   logo,
   children,
   getWalletInfo
 }) => {
-  const initialState = cookieToInitialState(config3, cookies);
+  const initialState = cookieToInitialState(config2, cookies);
   const value = useMemo4(
     () => ({
       getWalletInfo
@@ -767,7 +776,7 @@ var WalletKitProvider = ({
       getWalletInfo
     ]
   );
-  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config: config3, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { logo, children }) }) }) });
+  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config: config2, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { logo, children }) }) }) });
 };
 
 // src/hooks/useWalletKitConnect.ts

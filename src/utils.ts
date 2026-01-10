@@ -2,6 +2,7 @@ import { cookieStorage, createStorage } from '@wagmi/core';
 import { createAppKit as createReownAppKit, type CreateAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana';
+import { solana } from './networks';
 import { JWT_TOKEN_KEY, JWT_ADDRESS_KEY } from './constants';
 import type { AppKitNetwork } from './types';
 
@@ -58,7 +59,11 @@ export const createAppKit = (() => {
       themeMode,
       projectId,
       networks,
-      adapters: [wagmiAdapter, solanaAdapter],
+      adapters: networks.includes(solana) ? [wagmiAdapter, solanaAdapter] : [wagmiAdapter],
+      features: {
+        email: false,
+        socials: [],
+      },
       ...config,
     });
 

@@ -7,7 +7,7 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-WLCW25LG.js";
+} from "./chunk-VVSAMDQD.js";
 export {
   clearStoredJWT,
   createAppKit,

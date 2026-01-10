@@ -17,6 +17,7 @@ import {
 } from '@reown/appkit/react';
 import { type Provider } from '@reown/appkit-adapter-solana';
 import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
+import type { Views } from '@reown/appkit/react';
 import { WalletKitContext } from './WalletKitProvider';
 import * as web3 from '@ywwwtseng/web3';
 import { useSwitchChain, useAccount, useChainId } from 'wagmi';
@@ -24,7 +25,7 @@ import type { Address } from 'viem';
 import { ContinueInWalletModal } from './ContinueInWalletModal';
 import { mainnet, bsc } from './networks';
 import { useAccounts } from './hooks/useAccounts';
-import { config, useWagmiConfig } from './wagmi';
+import { useWagmiConfig } from './wagmi';
 import { useConnect } from './hooks/useConnect';
 import { getWagmiBalance, sendWagmiTransaction } from './wagmi';
 import { Token } from './types';
@@ -40,6 +41,7 @@ export function clearLocalStorageByPrefix(prefix: string) {
 export interface WalletKitConnectContextState {
   isConnectPending: boolean;
   isSendTxPending: boolean;
+  error: Error | null;
   accounts: {
     status:
     | 'connected'
@@ -54,7 +56,7 @@ export interface WalletKitConnectContextState {
   balance: Record<string, string>;
   currentChainId: number | undefined;
   getBalance: (token: Token) => Promise<void>;
-  open: () => Promise<void>;
+  connect: (options?: { view?: Views }) => Promise<void>;
   disconnect: (clearLocalStorage?: boolean) => Promise<void>;
   signTransaction: (params: {
     feePayer: string;
@@ -76,6 +78,7 @@ export interface WalletKitConnectContextState {
 export const WalletKitConnectContext = createContext<WalletKitConnectContextState>({
   isConnectPending: false,
   isSendTxPending: false,
+  error: null,
   accounts: {
     status: undefined,
     solana: undefined,
@@ -87,8 +90,8 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
   getBalance: () => {
     throw new Error('getBalance is not implemented');
   },
-  open: () => {
-    throw new Error('open is not implemented');
+  connect: () => {
+    throw new Error('connect is not implemented');
   },
   disconnect: () => {
     throw new Error('disconnect is not implemented');
@@ -111,6 +114,7 @@ export const WalletKitConnectProvider = ({
   logo: React.ReactNode;
   children: React.ReactNode;
 }) => {
+  const [connectError, setConnectError] = useState<Error | null>(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState<Record<string, string>>({});
   const [continueInWalletModal, openContinueInWalletModal] = useState(false);
@@ -128,6 +132,14 @@ export const WalletKitConnectProvider = ({
   const solanaProvider = useAppKitProvider<Provider>('solana');
 
   const { open, isPending: isConnectPending } = useConnect();
+
+  const connect = useCallback(async (options?: { view?: Views }) => {
+    try {
+      await open(options?.view);
+    } catch (error) {
+      setConnectError(error instanceof Error ? error : new Error(String(error)));
+    }
+  }, [open]);
 
   const switchNetwork = async (network: string) => {
     if (network === 'bsc') {
@@ -305,8 +317,6 @@ export const WalletKitConnectProvider = ({
           connection
         );
 
-        console.log('signature', signature);
-
         return signature;
       }
 
@@ -355,7 +365,8 @@ export const WalletKitConnectProvider = ({
       balance,
       isConnectPending,
       isSendTxPending,
-      open,
+      error:connectError,
+      connect,
       getBalance,
       currentChainId,
       disconnect: async (clearLocalStorage?: boolean) => {
@@ -376,7 +387,7 @@ export const WalletKitConnectProvider = ({
       isConnectPending,
       isSendTxPending,
       currentChainId,
-      open,
+      connect,
       getBalance,
       disconnect,
       signTransaction,

@@ -67,6 +67,7 @@ declare function useConnect(): {
 interface WalletKitConnectContextState {
     isConnectPending: boolean;
     isSendTxPending: boolean;
+    error: Error | null;
     accounts: {
         status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | undefined;
         solana: string | undefined;
@@ -76,7 +77,9 @@ interface WalletKitConnectContextState {
     balance: Record<string, string>;
     currentChainId: number | undefined;
     getBalance: (token: Token) => Promise<void>;
-    open: () => Promise<void>;
+    connect: (options?: {
+        view?: Views;
+    }) => Promise<void>;
     disconnect: (clearLocalStorage?: boolean) => Promise<void>;
     signTransaction: (params: {
         feePayer: string;
