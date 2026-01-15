@@ -1,4 +1,4 @@
 
 
-export { mainnet, bsc, solana } from '@reown/appkit/networks';
+export { mainnet, bsc, solana, bscTestnet } from '@reown/appkit/networks';
 

@@ -4,7 +4,7 @@ import { sendTransaction } from 'wagmi/actions';
 import { writeContract, type Config } from '@wagmi/core';
 import type { Address, Abi } from 'viem';
 
-export { useConfig as useWagmiConfig } from 'wagmi';
+export { useConfig as useWagmiConfig, useAccount as useWagmiAccount } from 'wagmi';
 export { getBalance as getWagmiBalance } from 'wagmi/actions';
 
 const ERC20_ABI = [

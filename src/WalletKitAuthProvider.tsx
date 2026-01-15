@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, useMemo, createContext, useRef } from 'react';
 
 import type { Address } from 'viem';
-import { type Views, useAppKitAccount, useDisconnect } from '@reown/appkit/react';
+import { type Views, useDisconnect } from '@reown/appkit/react';
 import { signMessage } from 'wagmi/actions';
 import { useConnect } from './hooks/useConnect';
-import { useWagmiConfig } from './wagmi';
+import { useWagmiConfig, useWagmiAccount } from './wagmi';
 import { getStoredJWT, clearStoredJWT, storeJWT, getSignMessage, isJWTExpired, getJWTExpirationTime } from './utils';
 import { Status } from './constants';
 
@@ -49,7 +49,8 @@ export const WalletKitAuthProvider = ({
   const [jwtToken, setJwtToken] = useState<string | null>(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
-  const ethersAccount = useAppKitAccount({ namespace: 'eip155' });
+  const ethersAccount = useWagmiAccount();
+
   const config = useWagmiConfig();
   const [initialized, setInitialized] = useState(false);
   const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState(false);
@@ -121,8 +122,9 @@ export const WalletKitAuthProvider = ({
   // 初始化时检查是否有存储的 JWT token
   useEffect(() => {
     if (isLoggingOutProcessing) return;
+
     // 只在正在连接且有地址时才跳过（避免断开连接过程中的 connecting 状态阻止初始化）
-    if (ethersAccount.status === 'connecting') {
+    if (ethersAccount.status !== 'connected' && !reconnectTimerRef.current) {
       reconnectTimerRef.current = setTimeout(async () => {
         await signOut();
         setInitialized(true);

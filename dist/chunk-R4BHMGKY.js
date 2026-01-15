@@ -1,3 +1,7 @@
+import {
+  solana
+} from "./chunk-6HFZ3ML7.js";
+
 // src/utils.ts
 import { cookieStorage, createStorage } from "@wagmi/core";
 import { createAppKit as createReownAppKit } from "@reown/appkit/react";
@@ -52,11 +56,10 @@ var createAppKit = /* @__PURE__ */ (() => {
       themeMode,
       projectId,
       networks,
-      adapters: [wagmiAdapter, solanaAdapter],
+      adapters: networks.includes(solana) ? [wagmiAdapter, solanaAdapter] : [wagmiAdapter],
       features: {
         email: false,
-        socials: [],
-        analytics: false
+        socials: []
       },
       ...config
     });

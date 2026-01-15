@@ -1,5 +1,5 @@
 import { AppKitNetwork } from '@reown/appkit/networks';
-export { AppKitNetwork, bsc, mainnet, solana } from '@reown/appkit/networks';
+export { AppKitNetwork, bsc, bscTestnet, mainnet, solana } from '@reown/appkit/networks';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import * as react from 'react';
 import { Views } from '@reown/appkit/react';

@@ -1,9 +1,4 @@
 import {
-  bsc,
-  mainnet,
-  solana
-} from "./chunk-JK52ORN4.js";
-import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
   Status,
@@ -15,11 +10,17 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-VVSAMDQD.js";
+} from "./chunk-R4BHMGKY.js";
+import {
+  bsc,
+  bscTestnet,
+  mainnet,
+  solana
+} from "./chunk-6HFZ3ML7.js";
 
 // src/WalletKitAuthProvider.tsx
 import { useCallback as useCallback2, useEffect, useState as useState2, useMemo, createContext, useRef } from "react";
-import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
+import { useDisconnect } from "@reown/appkit/react";
 import { signMessage } from "wagmi/actions";
 
 // src/hooks/useConnect.ts
@@ -46,7 +47,7 @@ import { createConfig, http } from "wagmi";
 import { mainnet as mainnet2, bsc as bsc2 } from "wagmi/chains";
 import { sendTransaction } from "wagmi/actions";
 import { writeContract } from "@wagmi/core";
-import { useConfig } from "wagmi";
+import { useConfig, useAccount } from "wagmi";
 import { getBalance } from "wagmi/actions";
 var ERC20_ABI = [
   {
@@ -116,7 +117,7 @@ var WalletKitAuthProvider = ({
   const [jwtToken, setJwtToken] = useState2(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
-  const ethersAccount = useAppKitAccount({ namespace: "eip155" });
+  const ethersAccount = useAccount();
   const config2 = useConfig();
   const [initialized, setInitialized] = useState2(false);
   const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState2(false);
@@ -172,7 +173,7 @@ var WalletKitAuthProvider = ({
   }, [appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    if (ethersAccount.status === "connecting") {
+    if (ethersAccount.status !== "connected" && !reconnectTimerRef.current) {
       reconnectTimerRef.current = setTimeout(async () => {
         await signOut();
         setInitialized(true);
@@ -313,7 +314,7 @@ import {
 } from "@reown/appkit/react";
 import { useAppKitConnection } from "@reown/appkit-adapter-solana/react";
 import * as web3 from "@ywwwtseng/web3";
-import { useSwitchChain, useAccount, useChainId } from "wagmi";
+import { useSwitchChain, useAccount as useAccount2, useChainId } from "wagmi";
 
 // src/ContinueInWalletModal.tsx
 import { Modal, Typography } from "@ywwwtseng/react-kit";
@@ -466,10 +467,10 @@ function ContinueInWalletModal({
 
 // src/hooks/useAccounts.ts
 import { useMemo as useMemo2 } from "react";
-import { useAppKitAccount as useAppKitAccount2 } from "@reown/appkit/react";
+import { useAppKitAccount } from "@reown/appkit/react";
 function useAccounts() {
-  const solanaAccount = useAppKitAccount2({ namespace: "solana" });
-  const ethersAccount = useAppKitAccount2({ namespace: "eip155" });
+  const solanaAccount = useAppKitAccount({ namespace: "solana" });
+  const ethersAccount = useAppKitAccount({ namespace: "eip155" });
   return useMemo2(() => {
     return {
       status: ethersAccount.status,
@@ -534,7 +535,7 @@ var WalletKitConnectProvider = ({
   const { connection } = useAppKitConnection();
   const accounts = useAccounts();
   const { switchChainAsync } = useSwitchChain();
-  const { isConnected: isEVMConnected } = useAccount();
+  const { isConnected: isEVMConnected } = useAccount2();
   const currentChainId = useChainId();
   const config2 = useConfig();
   const solanaProvider = useAppKitProvider("solana");
@@ -825,6 +826,7 @@ export {
   WalletKitContext,
   WalletKitProvider,
   bsc,
+  bscTestnet,
   clearStoredJWT,
   createAppKit,
   getJWTExpirationTime,
