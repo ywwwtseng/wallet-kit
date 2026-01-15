@@ -6,6 +6,12 @@ declare function useReadContract(params: any): {
     error: Error;
     data: any;
 };
+declare function useReadContracts(params: any): {
+    refetch: () => Promise<void>;
+    isLoading: boolean;
+    error: Error;
+    data: any;
+};
 declare function useWriteContract({ onSuccess, onError, }: {
     onSuccess?: (receipt: Awaited<ReturnType<typeof waitForTransactionReceipt>>) => void;
     onError?: (error: Error) => void;
@@ -16,4 +22,4 @@ declare function useWriteContract({ onSuccess, onError, }: {
     }>;
 };
 
-export { useReadContract, useWriteContract };
+export { useReadContract, useReadContracts, useWriteContract };

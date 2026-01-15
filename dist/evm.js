@@ -1,7 +1,7 @@
 // src/evm.ts
 import { useState, useEffect, useCallback } from "react";
 import { useConfig } from "wagmi";
-import { writeContract, readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { readContract, readContracts, writeContract, waitForTransactionReceipt } from "wagmi/actions";
 function useReadContract(params) {
   const config = useConfig();
   const [data, setData] = useState(null);
@@ -12,6 +12,27 @@ function useReadContract(params) {
     setIsLoading(true);
     setError(null);
     readContract(config, params).then(setData).catch(setError).finally(() => setIsLoading(false));
+  }, [config, JSON.stringify(params)]);
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+  return {
+    refetch: fetch,
+    isLoading,
+    error,
+    data
+  };
+}
+function useReadContracts(params) {
+  const config = useConfig();
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const fetch = useCallback(async () => {
+    if (!params) return;
+    setIsLoading(true);
+    setError(null);
+    readContracts(config, params).then(setData).catch(setError).finally(() => setIsLoading(false));
   }, [config, JSON.stringify(params)]);
   useEffect(() => {
     fetch();
@@ -50,5 +71,6 @@ function useWriteContract({
 }
 export {
   useReadContract,
+  useReadContracts,
   useWriteContract
 };
