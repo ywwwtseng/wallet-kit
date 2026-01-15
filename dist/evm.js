@@ -1,38 +1,54 @@
 // src/evm.ts
-import { useState } from "react";
-import { useWaitForTransactionReceipt, useConfig } from "wagmi";
-import { writeContract } from "wagmi/actions";
-function useWriteContract() {
+import { useState, useEffect, useCallback } from "react";
+import { useConfig } from "wagmi";
+import { writeContract, readContract, waitForTransactionReceipt } from "wagmi/actions";
+function useReadContract(params) {
   const config = useConfig();
-  const [hash, setHash] = useState();
+  const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash
-  });
-  ;
+  const fetch = useCallback(async () => {
+    if (!params) return;
+    setIsLoading(true);
+    setError(null);
+    readContract(config, params).then(setData).catch(setError).finally(() => setIsLoading(false));
+  }, [config, JSON.stringify(params)]);
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
   return {
+    refetch: fetch,
+    isLoading,
+    error,
+    data
+  };
+}
+function useWriteContract({
+  onSuccess,
+  onError
+}) {
+  const config = useConfig();
+  const [isLoading, setIsLoading] = useState(false);
+  return {
+    isLoading,
     writeContract: async (params) => {
       setIsLoading(true);
-      setError(null);
       try {
         const txHash = await writeContract(config, params);
-        setHash(txHash);
-        return txHash;
+        const receipt = await waitForTransactionReceipt(config, { hash: txHash });
+        onSuccess?.(receipt);
+        return receipt;
       } catch (err) {
-        const error2 = err instanceof Error ? err : new Error(String(err));
-        setError(error2);
-        throw error2;
+        const error = err instanceof Error ? err : new Error(String(err));
+        onError?.(error);
+        throw error;
       } finally {
         setIsLoading(false);
       }
-    },
-    isLoading: isLoading || isConfirming,
-    isConfirmed,
-    error,
-    hash
+    }
   };
 }
 export {
+  useReadContract,
   useWriteContract
 };

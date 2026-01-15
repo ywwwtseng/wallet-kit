@@ -23,7 +23,7 @@ import * as web3 from '@ywwwtseng/web3';
 import { useSwitchChain, useAccount, useChainId } from 'wagmi';
 import type { Address } from 'viem';
 import { ContinueInWalletModal } from './ContinueInWalletModal';
-import { mainnet, bsc } from './networks';
+import { mainnet, bsc, bscTestnet } from './networks';
 import { useAccounts } from './hooks/useAccounts';
 import { useWagmiConfig } from './wagmi';
 import { useConnect } from './hooks/useConnect';
@@ -144,6 +144,8 @@ export const WalletKitConnectProvider = ({
   const switchNetwork = async (network: string) => {
     if (network === 'bsc') {
       await switchAppKitNetwork(bsc);
+    } else if (network === 'bscTestnet') {
+      await switchAppKitNetwork(bscTestnet);
     } else if (network === 'ethereum') {
       await switchAppKitNetwork(mainnet);
     }

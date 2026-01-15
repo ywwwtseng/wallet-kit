@@ -550,6 +550,8 @@ var WalletKitConnectProvider = ({
   const switchNetwork = async (network) => {
     if (network === "bsc") {
       await switchAppKitNetwork(bsc);
+    } else if (network === "bscTestnet") {
+      await switchAppKitNetwork(bscTestnet);
     } else if (network === "ethereum") {
       await switchAppKitNetwork(mainnet);
     }

@@ -1,36 +1,60 @@
-import { useState } from 'react';
-import { useWaitForTransactionReceipt, useConfig } from 'wagmi';
-import { writeContract } from 'wagmi/actions';
+import { useState, useEffect, useCallback } from 'react';
+import { useConfig } from 'wagmi';
+import { writeContract, readContract, waitForTransactionReceipt } from 'wagmi/actions';
 
-export function useWriteContract() {
+export function useReadContract(params: any) {
   const config = useConfig();
-  const [hash, setHash] = useState<`0x${string}` | undefined>();
+  const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash,
-  });;
 
+  const fetch = useCallback(async () => {
+    if (!params) return;
+    setIsLoading(true);
+    setError(null);
+    readContract(config, params as any)
+      .then(setData).catch(setError)
+      .finally(() => setIsLoading(false));
+  }, [config, JSON.stringify(params)]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+  
   return {
+    refetch: fetch,
+    isLoading,
+    error,
+    data,
+  }
+}
+
+export function useWriteContract({
+  onSuccess,
+  onError,
+}: {
+  onSuccess?: (receipt: Awaited<ReturnType<typeof waitForTransactionReceipt>>) => void;
+  onError?: (error: Error) => void;
+}) {
+  const config = useConfig();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  return {
+    isLoading,
     writeContract: async (params: any) => {
       setIsLoading(true);
-      setError(null);
       try {
         const txHash = await writeContract(config, params as any);
-        setHash(txHash);
-        return txHash;
+        const receipt = await waitForTransactionReceipt(config, { hash: txHash });
+        onSuccess?.(receipt);
+        return receipt;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
+        onError?.(error);
         throw error;
       } finally {
         setIsLoading(false);
       }
-    },
-    isLoading: isLoading || isConfirming,
-    isConfirmed,
-    error,
-    hash,
-  };
+    }
+  }
 }

@@ -1,9 +1,19 @@
-declare function useWriteContract(): {
-    writeContract: (params: any) => Promise<`0x${string}`>;
+import { waitForTransactionReceipt } from 'wagmi/actions';
+
+declare function useReadContract(params: any): {
+    refetch: () => Promise<void>;
     isLoading: boolean;
-    isConfirmed: boolean;
     error: Error;
-    hash: `0x${string}`;
+    data: any;
+};
+declare function useWriteContract({ onSuccess, onError, }: {
+    onSuccess?: (receipt: Awaited<ReturnType<typeof waitForTransactionReceipt>>) => void;
+    onError?: (error: Error) => void;
+}): {
+    isLoading: boolean;
+    writeContract: (params: any) => Promise<{
+        [x: string]: any;
+    }>;
 };
 
-export { useWriteContract };
+export { useReadContract, useWriteContract };
