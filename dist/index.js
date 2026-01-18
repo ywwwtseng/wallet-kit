@@ -173,11 +173,13 @@ var WalletKitAuthProvider = ({
   }, [appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    if (ethersAccount.status !== "connected" && !reconnectTimerRef.current) {
-      reconnectTimerRef.current = setTimeout(async () => {
-        await signOut();
-        setInitialized(true);
-      }, 5e3);
+    if (ethersAccount.status !== "connected") {
+      if (!reconnectTimerRef.current) {
+        reconnectTimerRef.current = setTimeout(async () => {
+          await signOut();
+          setInitialized(true);
+        }, 5e3);
+      }
       return;
     }
     ;
@@ -196,6 +198,7 @@ var WalletKitAuthProvider = ({
         setupExpirationTimer(stored.token);
       }
     } else if (stored && stored.address !== ethersAccount.address) {
+      console.log("\u94B1\u5305\u5730\u5740\u4E0D\u5339\u914D\uFF0C\u6E05\u9664 JWT token", stored.address, ethersAccount.address);
       clearStoredJWT(appKey);
       setJwtToken(null);
     }

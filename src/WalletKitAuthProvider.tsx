@@ -124,11 +124,14 @@ export const WalletKitAuthProvider = ({
     if (isLoggingOutProcessing) return;
 
     // 只在正在连接且有地址时才跳过（避免断开连接过程中的 connecting 状态阻止初始化）
-    if (ethersAccount.status !== 'connected' && !reconnectTimerRef.current) {
-      reconnectTimerRef.current = setTimeout(async () => {
-        await signOut();
-        setInitialized(true);
-      }, 5000);
+    if (ethersAccount.status !== 'connected') {
+      if (!reconnectTimerRef.current) {
+        reconnectTimerRef.current = setTimeout(async () => {
+          await signOut();
+          setInitialized(true);
+        }, 5000);
+      }
+
       return;
     };
 
@@ -149,6 +152,7 @@ export const WalletKitAuthProvider = ({
         setupExpirationTimer(stored.token);
       }
     } else if (stored && stored.address !== ethersAccount.address) {
+      console.log('钱包地址不匹配，清除 JWT token', stored.address, ethersAccount.address);
       // 地址不匹配，清除旧的 token
       clearStoredJWT(appKey);
       setJwtToken(null);
