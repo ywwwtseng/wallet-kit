@@ -204,6 +204,7 @@ var WalletKitAuthProvider = ({
   useEffect(() => {
     if (isLoggingOutProcessing) return;
     if (!ethersAccount.address && jwtToken) {
+      console.log("\u94B1\u5305\u65AD\u5F00\u8FDE\u63A5\uFF0C\u6E05\u9664 JWT token", ethersAccount.address, ethersAccount.status);
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;

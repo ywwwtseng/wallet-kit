@@ -162,6 +162,7 @@ export const WalletKitAuthProvider = ({
     if (isLoggingOutProcessing) return;
 
     if (!ethersAccount.address && jwtToken) {
+      console.log('钱包断开连接，清除 JWT token', ethersAccount.address, ethersAccount.status);
       // 清除定时器
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
