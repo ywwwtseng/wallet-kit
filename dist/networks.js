@@ -2,11 +2,15 @@ import {
   bsc,
   bscTestnet,
   mainnet,
-  solana
-} from "./chunk-6HFZ3ML7.js";
+  sepolia,
+  solana,
+  solanaDevnet
+} from "./chunk-DMT75HZL.js";
 export {
   bsc,
   bscTestnet,
   mainnet,
-  solana
+  sepolia,
+  solana,
+  solanaDevnet
 };

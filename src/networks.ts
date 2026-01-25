@@ -1,4 +1,1 @@
-
-
-export { mainnet, bsc, solana, bscTestnet } from '@reown/appkit/networks';
-
+export { mainnet, bsc, solana, sepolia, bscTestnet, solanaDevnet } from '@reown/appkit/networks';

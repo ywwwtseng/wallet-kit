@@ -1,6 +1,6 @@
 import {
   solana
-} from "./chunk-6HFZ3ML7.js";
+} from "./chunk-DMT75HZL.js";
 
 // src/utils.ts
 import { cookieStorage, createStorage } from "@wagmi/core";

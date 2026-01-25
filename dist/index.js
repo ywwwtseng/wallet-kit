@@ -10,13 +10,15 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-R4BHMGKY.js";
+} from "./chunk-DRJVSZSU.js";
 import {
   bsc,
   bscTestnet,
   mainnet,
-  solana
-} from "./chunk-6HFZ3ML7.js";
+  sepolia,
+  solana,
+  solanaDevnet
+} from "./chunk-DMT75HZL.js";
 
 // src/WalletKitAuthProvider.tsx
 import { useCallback as useCallback2, useEffect, useState as useState2, useMemo, createContext, useRef } from "react";
@@ -841,7 +843,9 @@ export {
   isJWTExpired,
   mainnet,
   parseJSON,
+  sepolia,
   solana,
+  solanaDevnet,
   storeJWT,
   useConnect,
   useWalletKitAuth,
