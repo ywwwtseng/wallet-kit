@@ -1,4 +1,5 @@
 import {
+  clearLocalStorageByPrefix,
   clearStoredJWT,
   createAppKit,
   getJWTExpirationTime,
@@ -7,9 +8,10 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-DRJVSZSU.js";
+} from "./chunk-7JNF4KQ2.js";
 import "./chunk-DMT75HZL.js";
 export {
+  clearLocalStorageByPrefix,
   clearStoredJWT,
   createAppKit,
   getJWTExpirationTime,

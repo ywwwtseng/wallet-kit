@@ -39,6 +39,14 @@ var createAppKit = /* @__PURE__ */ (() => {
     ...config
   }) => {
     if (instance) {
+      const existingNetworkIds = instance.networks.map((n) => n.id).sort();
+      const newNetworkIds = networks.map((n) => n.id).sort();
+      const networksMatch = existingNetworkIds.length === newNetworkIds.length && existingNetworkIds.every((id, index) => id === newNetworkIds[index]);
+      if (!networksMatch) {
+        console.warn(
+          "createAppKit: Networks configuration has changed. The existing instance will be reused, which may cause issues. Please ensure createAppKit is called with the same networks configuration."
+        );
+      }
       return instance;
     }
     const wagmiAdapter = new WagmiAdapter({
@@ -65,11 +73,19 @@ var createAppKit = /* @__PURE__ */ (() => {
     });
     instance = {
       config: wagmiAdapter.wagmiConfig,
-      getWalletInfo: () => modal?.getWalletInfo()
+      getWalletInfo: () => modal?.getWalletInfo(),
+      networks
     };
     return instance;
   };
 })();
+function clearLocalStorageByPrefix(prefix) {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith(prefix)) {
+      localStorage.removeItem(key);
+    }
+  });
+}
 async function getSignMessage(url, address) {
   const response = await fetch(url, {
     method: "POST",
@@ -155,6 +171,7 @@ export {
   JWT_ADDRESS_KEY,
   parseJSON,
   createAppKit,
+  clearLocalStorageByPrefix,
   getSignMessage,
   getStoredJWT,
   storeJWT,

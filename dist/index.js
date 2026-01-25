@@ -2,6 +2,7 @@ import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
   Status,
+  clearLocalStorageByPrefix,
   clearStoredJWT,
   createAppKit,
   getJWTExpirationTime,
@@ -10,7 +11,7 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-DRJVSZSU.js";
+} from "./chunk-7JNF4KQ2.js";
 import {
   bsc,
   bscTestnet,
@@ -479,37 +480,50 @@ function useAccounts() {
   const ethersAccount = useAppKitAccount({ namespace: "eip155" });
   return useMemo2(() => {
     return {
-      status: ethersAccount.status,
-      bsc: ethersAccount.address,
-      ethereum: ethersAccount.address,
-      solana: solanaAccount.address
+      bsc: {
+        address: ethersAccount.address,
+        status: ethersAccount.status
+      },
+      ethereum: {
+        address: ethersAccount.address,
+        status: ethersAccount.status
+      },
+      solana: {
+        address: solanaAccount.address,
+        status: solanaAccount.status
+      }
     };
   }, [solanaAccount, ethersAccount]);
 }
 
 // src/WalletKitConnectProvider.tsx
 import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
-function clearLocalStorageByPrefix(prefix) {
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith(prefix)) {
-      localStorage.removeItem(key);
-    }
-  });
-}
 var WalletKitConnectContext = createContext2({
+  isMainnet: true,
   isConnectPending: false,
   isSendTxPending: false,
   error: null,
   accounts: {
-    status: void 0,
-    solana: void 0,
-    bsc: void 0,
-    ethereum: void 0
+    bsc: {
+      address: void 0,
+      status: void 0
+    },
+    ethereum: {
+      address: void 0,
+      status: void 0
+    },
+    solana: {
+      address: void 0,
+      status: void 0
+    }
   },
   balance: {},
   currentChainId: void 0,
   getBalance: () => {
     throw new Error("getBalance is not implemented");
+  },
+  getNetwork: () => {
+    throw new Error("getNetwork is not implemented");
   },
   connect: () => {
     throw new Error("connect is not implemented");
@@ -528,6 +542,7 @@ var WalletKitConnectContext = createContext2({
   }
 });
 var WalletKitConnectProvider = ({
+  isMainnet = true,
   logo,
   children
 }) => {
@@ -553,47 +568,62 @@ var WalletKitConnectProvider = ({
       setConnectError(error instanceof Error ? error : new Error(String(error)));
     }
   }, [open]);
-  const switchNetwork = async (network) => {
+  const getNetwork = useCallback3((network) => {
     if (network === "bsc") {
-      await switchAppKitNetwork(bsc);
-    } else if (network === "bscTestnet") {
-      await switchAppKitNetwork(bscTestnet);
+      return isMainnet ? bsc : bscTestnet;
     } else if (network === "ethereum") {
-      await switchAppKitNetwork(mainnet);
+      return isMainnet ? mainnet : sepolia;
+    } else if (network === "solana") {
+      return isMainnet ? solana : solanaDevnet;
+    }
+    return void 0;
+  }, [isMainnet]);
+  const getAccountAddress = useCallback3((network) => {
+    if (network === "bsc") {
+      return accounts.bsc.address;
+    } else if (network === "ethereum") {
+      return accounts.ethereum.address;
+    } else if (network === "solana") {
+      return accounts.solana.address;
+    }
+    return void 0;
+  }, [accounts]);
+  const switchNetwork = async (network) => {
+    if (network === "bsc" || network === "ethereum") {
+      const targetNetwork = getNetwork(network);
+      if (!targetNetwork) {
+        throw new Error(`Network ${network} not found`);
+      }
+      await switchAppKitNetwork(targetNetwork);
     }
   };
   const getBalance3 = async (token) => {
     if (token.network === "solana") {
-      if (!connection || !accounts.solana) {
-        return;
+      if (!connection || !accounts.solana.address) {
+        throw Error("user is disconnected");
       }
       const balance2 = await web3.getBalance({
         network: token.network,
         connection
       })({
-        address: accounts.solana,
+        address: accounts.solana.address,
         tokenAddress: token.token_address,
         tokenProgram: token.token_program
       });
       setBalance({ [token.id]: String(balance2) });
-    } else if (token.network === "bsc") {
-      if (!connection || !accounts.ethereum) {
-        return;
+    } else {
+      const address = getAccountAddress(token.network);
+      if (!address) {
+        throw Error("user is disconnected");
+      }
+      const network = getNetwork(token.network);
+      if (!network) {
+        throw Error("network not found");
       }
       const balance2 = await getBalance(config2, {
-        address: accounts.ethereum,
+        address,
         token: token.token_address ?? void 0,
-        chainId: bsc.id
-      });
-      setBalance({ [token.id]: String(balance2.value) });
-    } else if (token.network === "ethereum") {
-      if (!connection || !accounts.ethereum) {
-        return;
-      }
-      const balance2 = await getBalance(config2, {
-        address: accounts.ethereum,
-        token: token.token_address ?? void 0,
-        chainId: mainnet.id
+        chainId: network.id
       });
       setBalance({ [token.id]: String(balance2.value) });
     }
@@ -667,8 +697,7 @@ var WalletKitConnectProvider = ({
     try {
       setIsSendTxPending(true);
       openContinueInWalletModal(true);
-      const network = token.network;
-      if (network === "solana") {
+      if (token.network === "solana") {
         if (!connection) {
           throw Error("Solana connection not available");
         }
@@ -684,14 +713,15 @@ var WalletKitConnectProvider = ({
         );
         return signature;
       }
-      if (!isEVMConnected || !accounts.ethereum) {
+      const network = getNetwork(token.network);
+      const address = getAccountAddress(token.network);
+      if (!network) {
+        throw Error("network not found");
+      }
+      if (!isEVMConnected || !address) {
         throw Error("EVM wallet not connected. Please connect an EVM wallet first.");
       }
-      const chainIds = {
-        bsc: bsc.id,
-        ethereum: mainnet.id
-      };
-      const chainId = chainIds[network];
+      const chainId = network.id;
       if (!chainId) {
         throw Error(`Unsupported network: ${network}`);
       }
@@ -714,14 +744,16 @@ var WalletKitConnectProvider = ({
   };
   const value = useMemo3(
     () => ({
+      isMainnet,
       accounts,
       balance,
       isConnectPending,
       isSendTxPending,
       error: connectError,
+      currentChainId,
       connect,
       getBalance: getBalance3,
-      currentChainId,
+      getNetwork,
       disconnect: async (clearLocalStorage) => {
         await disconnect();
         if (clearLocalStorage) {
@@ -734,13 +766,16 @@ var WalletKitConnectProvider = ({
       switchNetwork
     }),
     [
+      isMainnet,
       accounts,
       balance,
       isConnectPending,
       isSendTxPending,
       currentChainId,
+      connectError,
       connect,
       getBalance3,
+      getNetwork,
       disconnect,
       signTransaction,
       sendTransaction2,
@@ -770,6 +805,7 @@ var WalletKitContext = createContext3({
   getWalletInfo: () => void 0
 });
 var WalletKitProvider = ({
+  isMainnet = true,
   config: config2,
   cookies,
   logo,
@@ -785,7 +821,7 @@ var WalletKitProvider = ({
       getWalletInfo
     ]
   );
-  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config: config2, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { logo, children }) }) }) });
+  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config: config2, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { isMainnet, logo, children }) }) }) });
 };
 
 // src/hooks/useWalletKitConnect.ts
@@ -835,6 +871,7 @@ export {
   WalletKitProvider,
   bsc,
   bscTestnet,
+  clearLocalStorageByPrefix,
   clearStoredJWT,
   createAppKit,
   getJWTExpirationTime,

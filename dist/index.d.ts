@@ -6,7 +6,8 @@ import { Views } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ConnectedWalletInfo } from '@reown/appkit';
 import * as web3 from '@ywwwtseng/web3';
-export { clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT } from './utils.js';
+import { Address } from 'viem';
+export { clearLocalStorageByPrefix, clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT } from './utils.js';
 
 type Token = {
     id: string;
@@ -51,7 +52,8 @@ interface WalletKitContextType {
     getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }
 declare const WalletKitContext: react.Context<WalletKitContextType>;
-declare const WalletKitProvider: ({ config, cookies, logo, children, getWalletInfo, }: {
+declare const WalletKitProvider: ({ isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+    isMainnet?: boolean;
     config: typeof WagmiAdapter.prototype.wagmiConfig;
     cookies?: string | null;
     logo: React.ReactNode;
@@ -64,19 +66,26 @@ declare function useConnect(): {
     isPending: boolean;
 };
 
+interface Account {
+    address: Address | string | undefined;
+    status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | undefined;
+}
+interface Accounts {
+    bsc: Account;
+    ethereum: Account;
+    solana: Account;
+}
+
 interface WalletKitConnectContextState {
+    isMainnet: boolean;
     isConnectPending: boolean;
     isSendTxPending: boolean;
     error: Error | null;
-    accounts: {
-        status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | undefined;
-        solana: string | undefined;
-        bsc: string | undefined;
-        ethereum: string | undefined;
-    };
+    accounts: Accounts;
     balance: Record<string, string>;
     currentChainId: number | undefined;
     getBalance: (token: Token) => Promise<void>;
+    getNetwork: (network: string) => AppKitNetwork | undefined;
     connect: (options?: {
         view?: Views;
     }) => Promise<void>;

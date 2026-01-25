@@ -23,6 +23,7 @@ export const createAppKit = (() => {
   let instance: {
     config: typeof WagmiAdapter.prototype.wagmiConfig;
     getWalletInfo: () => ReturnType<ReturnType<typeof createReownAppKit>['getWalletInfo']>;
+    networks: AppKitNetwork[];
   } | null = null;
 
   return ({
@@ -37,8 +38,23 @@ export const createAppKit = (() => {
     networks: [AppKitNetwork, ...AppKitNetwork[]];
     ssr: boolean;
   } & CreateAppKit) => {
-    // 如果已经创建了实例，直接返回
+    // 如果已经创建了实例，检查网络配置是否匹配
     if (instance) {
+      // 检查网络配置是否相同（通过比较网络 ID）
+      const existingNetworkIds = instance.networks.map(n => n.id).sort();
+      const newNetworkIds = networks.map(n => n.id).sort();
+      const networksMatch = 
+        existingNetworkIds.length === newNetworkIds.length &&
+        existingNetworkIds.every((id, index) => id === newNetworkIds[index]);
+      
+      if (!networksMatch) {
+        console.warn(
+          'createAppKit: Networks configuration has changed. ' +
+          'The existing instance will be reused, which may cause issues. ' +
+          'Please ensure createAppKit is called with the same networks configuration.'
+        );
+      }
+      
       return instance;
     }
 
@@ -70,11 +86,20 @@ export const createAppKit = (() => {
     instance = {
       config: wagmiAdapter.wagmiConfig,
       getWalletInfo: () => modal?.getWalletInfo(),
+      networks,
     };
 
     return instance;
   };
 })();
+
+export function clearLocalStorageByPrefix(prefix: string) {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith(prefix)) {
+      localStorage.removeItem(key);
+    }
+  });
+}
 
 /**
  * 从后端获取签名消息和 nonce

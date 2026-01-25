@@ -11,7 +11,9 @@ declare const createAppKit: ({ themeMode, projectId, networks, ssr, ...config }:
 } & CreateAppKit) => {
     config: typeof WagmiAdapter.prototype.wagmiConfig;
     getWalletInfo: () => ReturnType<ReturnType<typeof createAppKit$1>["getWalletInfo"]>;
+    networks: AppKitNetwork[];
 };
+declare function clearLocalStorageByPrefix(prefix: string): void;
 /**
  * 从后端获取签名消息和 nonce
  */
@@ -44,4 +46,4 @@ declare function getJWTExpirationTime(token: string): number | null;
  */
 declare function isJWTExpired(token: string): boolean;
 
-export { clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT };
+export { clearLocalStorageByPrefix, clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT };

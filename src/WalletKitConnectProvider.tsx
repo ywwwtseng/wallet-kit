@@ -15,6 +15,7 @@ import {
   useDisconnect,
   useAppKitNetwork,
 } from '@reown/appkit/react';
+import type { AppKitNetwork } from '@reown/appkit/networks';
 import { type Provider } from '@reown/appkit-adapter-solana';
 import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
 import type { Views } from '@reown/appkit/react';
@@ -23,39 +24,24 @@ import * as web3 from '@ywwwtseng/web3';
 import { useSwitchChain, useAccount, useChainId } from 'wagmi';
 import type { Address } from 'viem';
 import { ContinueInWalletModal } from './ContinueInWalletModal';
-import { mainnet, bsc, bscTestnet } from './networks';
-import { useAccounts } from './hooks/useAccounts';
+import { mainnet, sepolia, bsc, bscTestnet, solana, solanaDevnet } from './networks';
+import { useAccounts, type Accounts } from './hooks/useAccounts';
 import { useWagmiConfig } from './wagmi';
 import { useConnect } from './hooks/useConnect';
 import { getWagmiBalance, sendWagmiTransaction } from './wagmi';
+import { clearLocalStorageByPrefix } from './utils';
 import { Token } from './types';
 
-export function clearLocalStorageByPrefix(prefix: string) {
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith(prefix)) {
-      localStorage.removeItem(key);
-    }
-  });
-}
-
 export interface WalletKitConnectContextState {
+  isMainnet: boolean;
   isConnectPending: boolean;
   isSendTxPending: boolean;
   error: Error | null;
-  accounts: {
-    status:
-    | 'connected'
-    | 'disconnected'
-    | 'connecting'
-    | 'reconnecting'
-    | undefined;
-    solana: string | undefined;
-    bsc: string | undefined;
-    ethereum: string | undefined;
-  };
+  accounts: Accounts;
   balance: Record<string, string>;
   currentChainId: number | undefined;
   getBalance: (token: Token) => Promise<void>;
+  getNetwork: (network: string) => AppKitNetwork | undefined;
   connect: (options?: { view?: Views }) => Promise<void>;
   disconnect: (clearLocalStorage?: boolean) => Promise<void>;
   signTransaction: (params: {
@@ -76,19 +62,31 @@ export interface WalletKitConnectContextState {
 }
 
 export const WalletKitConnectContext = createContext<WalletKitConnectContextState>({
+  isMainnet: true,
   isConnectPending: false,
   isSendTxPending: false,
   error: null,
   accounts: {
-    status: undefined,
-    solana: undefined,
-    bsc: undefined,
-    ethereum: undefined,
+    bsc: {
+      address: undefined,
+      status: undefined,
+    },
+    ethereum: {
+      address: undefined,
+      status: undefined,
+    },
+    solana: {
+      address: undefined,
+      status: undefined,
+    },
   },
   balance: {},
   currentChainId: undefined,
   getBalance: () => {
     throw new Error('getBalance is not implemented');
+  },
+  getNetwork: () => {
+    throw new Error('getNetwork is not implemented');
   },
   connect: () => {
     throw new Error('connect is not implemented');
@@ -108,9 +106,11 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
 });
 
 export const WalletKitConnectProvider = ({
+  isMainnet = true,
   logo,
   children,
 }: {
+  isMainnet?: boolean;
   logo: React.ReactNode;
   children: React.ReactNode;
 }) => {
@@ -141,53 +141,70 @@ export const WalletKitConnectProvider = ({
     }
   }, [open]);
 
-  const switchNetwork = async (network: string) => {
+  const getNetwork = useCallback((network: string) => {
     if (network === 'bsc') {
-      await switchAppKitNetwork(bsc);
-    } else if (network === 'bscTestnet') {
-      await switchAppKitNetwork(bscTestnet);
+      return isMainnet ? bsc : bscTestnet;
+    }  else if (network === 'ethereum') {
+      return isMainnet ? mainnet : sepolia;
+    } else if (network === 'solana') {
+      return isMainnet ? solana : solanaDevnet;
+    }
+    return undefined;
+  }, [isMainnet]);
+
+  const getAccountAddress = useCallback((network: string): Address | string | undefined => {
+    if (network === 'bsc') {
+      return accounts.bsc.address;
     } else if (network === 'ethereum') {
-      await switchAppKitNetwork(mainnet);
+      return accounts.ethereum.address;
+    } else if (network === 'solana') {
+      return accounts.solana.address;
+    }
+    return undefined;
+  }, [accounts]);
+
+  const switchNetwork = async (network: string) => {
+    if (network === 'bsc' || network === 'ethereum') {
+      const targetNetwork = getNetwork(network);
+      if (!targetNetwork) {
+        throw new Error(`Network ${network} not found`);
+      }
+      // switchAppKitNetwork 会自动验证网络是否在 createAppKit 的 networks 配置中
+      // 如果不在，它会抛出相应的错误
+      await switchAppKitNetwork(targetNetwork);
     }
   };
 
   const getBalance = async (token: Token) => {
     if (token.network === 'solana') {
-      if (!connection || !accounts.solana) {
-        return;
+      if (!connection || !accounts.solana.address) {
+        throw Error('user is disconnected');
       }
 
       const balance = await web3.getBalance({
         network: token.network,
         connection: connection,
       })({
-        address: accounts.solana,
+        address: accounts.solana.address,
         tokenAddress: token.token_address,
         tokenProgram: token.token_program,
       });
 
       setBalance({ [token.id]: String(balance) });
-    } else if (token.network === 'bsc') {
-      if (!connection || !accounts.ethereum) {
-        return;
+    } else {
+      const address = getAccountAddress(token.network) as Address;
+      if (!address) {
+        throw Error('user is disconnected');
+      }
+      const network = getNetwork(token.network);
+      if (!network) {
+        throw Error('network not found');
       }
 
       const balance = await getWagmiBalance(config, {
-        address: accounts.ethereum as Address,
+        address,
         token: (token.token_address ?? undefined) as Address | undefined,
-        chainId: bsc.id,
-      });
-
-      setBalance({ [token.id]: String(balance.value) });
-    } else if (token.network === 'ethereum') {
-      if (!connection || !accounts.ethereum) {
-        return;
-      }
-
-      const balance = await getWagmiBalance(config, {
-        address: accounts.ethereum as Address,
-        token: (token.token_address ?? undefined) as Address | undefined,
-        chainId: mainnet.id,
+        chainId: network.id as number,
       });
 
       setBalance({ [token.id]: String(balance.value) });
@@ -291,19 +308,8 @@ export const WalletKitConnectProvider = ({
       setIsSendTxPending(true);
       openContinueInWalletModal(true);
 
-      const network = token.network;
-
-      // if (network === 'solana') {
-      //   await switchNetwork(solana);
-      // } else if (network === 'bsc') {
-      //   console.log('switch bsc')
-      //   await switchNetwork(bsc);
-      // } else if (network === 'ethereum') {
-      //   await switchNetwork(mainnet);
-      // }
-
       // Solana 网络使用独立的逻辑
-      if (network === 'solana') {
+      if (token.network === 'solana') {
         if (!connection) {
           throw Error('Solana connection not available');
         }
@@ -322,21 +328,20 @@ export const WalletKitConnectProvider = ({
         return signature;
       }
 
+      const network = getNetwork(token.network);
+      const address = getAccountAddress(token.network) as Address;
 
-
-
+      if (!network) {
+        throw Error('network not found');
+      }
 
       // EVM 链（ethereum、bsc）使用 wagmi
       // 检查 EVM 钱包是否已连接
-      if (!isEVMConnected || !accounts.ethereum) {
+      if (!isEVMConnected || !address) {
         throw Error('EVM wallet not connected. Please connect an EVM wallet first.');
       }
 
-      const chainIds = {
-        bsc: bsc.id,
-        ethereum: mainnet.id,
-      };
-      const chainId = chainIds[network as keyof typeof chainIds] as number | undefined;
+      const chainId = network.id as number;
 
       if (!chainId) {
         throw Error(`Unsupported network: ${network}`);
@@ -363,14 +368,16 @@ export const WalletKitConnectProvider = ({
 
   const value = useMemo(
     () => ({
+      isMainnet,
       accounts,
       balance,
       isConnectPending,
       isSendTxPending,
-      error:connectError,
+      error: connectError,
+      currentChainId,
       connect,
       getBalance,
-      currentChainId,
+      getNetwork,
       disconnect: async (clearLocalStorage?: boolean) => {
         await disconnect();
 
@@ -384,13 +391,16 @@ export const WalletKitConnectProvider = ({
       switchNetwork,
     }),
     [
+      isMainnet,
       accounts,
       balance,
       isConnectPending,
       isSendTxPending,
       currentChainId,
+      connectError,
       connect,
       getBalance,
+      getNetwork,
       disconnect,
       signTransaction,
       sendTransaction,
