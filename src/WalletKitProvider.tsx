@@ -62,7 +62,7 @@ export const WalletKitProvider = ({
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config} initialState={initialState}>
         <WalletKitContext.Provider value={value}>
-          <WalletKitConnectProvider isMainnet={isMainnet} logo={logo}>
+          <WalletKitConnectProvider isMainnet={isMainnet} logo={logo} config={config}>
             {children}
           </WalletKitConnectProvider>
         </WalletKitContext.Provider>

@@ -1,9 +1,10 @@
 import {
-  solana
+  solana,
+  solanaDevnet
 } from "./chunk-DMT75HZL.js";
 
 // src/utils.ts
-import { cookieStorage, createStorage } from "@wagmi/core";
+import { cookieStorage, createStorage, http } from "@wagmi/core";
 import { createAppKit as createReownAppKit } from "@reown/appkit/react";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { SolanaAdapter } from "@reown/appkit-adapter-solana";
@@ -29,56 +30,33 @@ var parseJSON = (src) => {
     return null;
   }
 };
-var createAppKit = /* @__PURE__ */ (() => {
-  let instance = null;
-  return ({
+function initAppKit({ projectId, themeMode = "dark", networks, ssr = true, ...rest }) {
+  const evmNetworks = networks.filter((n) => typeof n.id === "number");
+  const hasSolana = networks.some((n) => n.id === solana.id || n.id === solanaDevnet.id);
+  const wagmiAdapter = new WagmiAdapter({
+    projectId,
+    networks: evmNetworks,
+    ssr,
+    ...ssr ? { storage: createStorage({ storage: cookieStorage }) } : {},
+    transports: evmNetworks.reduce((acc, n) => {
+      acc[n.id] = http();
+      return acc;
+    }, {})
+  });
+  const adapters = hasSolana ? [wagmiAdapter, new SolanaAdapter()] : [wagmiAdapter];
+  const modal = createReownAppKit({
     themeMode,
     projectId,
     networks,
-    ssr = false,
-    ...config
-  }) => {
-    if (instance) {
-      const existingNetworkIds = instance.networks.map((n) => n.id).sort();
-      const newNetworkIds = networks.map((n) => n.id).sort();
-      const networksMatch = existingNetworkIds.length === newNetworkIds.length && existingNetworkIds.every((id, index) => id === newNetworkIds[index]);
-      if (!networksMatch) {
-        console.warn(
-          "createAppKit: Networks configuration has changed. The existing instance will be reused, which may cause issues. Please ensure createAppKit is called with the same networks configuration."
-        );
-      }
-      return instance;
-    }
-    const wagmiAdapter = new WagmiAdapter({
-      projectId,
-      networks,
-      ssr,
-      ...ssr ? {
-        storage: createStorage({
-          storage: cookieStorage
-        })
-      } : {}
-    });
-    const solanaAdapter = new SolanaAdapter();
-    const modal = createReownAppKit({
-      themeMode,
-      projectId,
-      networks,
-      adapters: networks.includes(solana) ? [wagmiAdapter, solanaAdapter] : [wagmiAdapter],
-      features: {
-        email: false,
-        socials: []
-      },
-      ...config
-    });
-    instance = {
-      config: wagmiAdapter.wagmiConfig,
-      getWalletInfo: () => modal?.getWalletInfo(),
-      networks
-    };
-    return instance;
+    adapters,
+    features: { email: false, socials: [] },
+    ...rest
+  });
+  return {
+    config: wagmiAdapter.wagmiConfig,
+    getWalletInfo: () => modal?.getWalletInfo()
   };
-})();
+}
 function clearLocalStorageByPrefix(prefix) {
   Object.keys(localStorage).forEach((key) => {
     if (key.startsWith(prefix)) {
@@ -170,7 +148,7 @@ export {
   JWT_TOKEN_KEY,
   JWT_ADDRESS_KEY,
   parseJSON,
-  createAppKit,
+  initAppKit,
   clearLocalStorageByPrefix,
   getSignMessage,
   getStoredJWT,

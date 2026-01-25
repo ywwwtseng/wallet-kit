@@ -21,7 +21,7 @@ import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
 import type { Views } from '@reown/appkit/react';
 import { WalletKitContext } from './WalletKitProvider';
 import * as web3 from '@ywwwtseng/web3';
-import { useSwitchChain, useAccount, useChainId } from 'wagmi';
+import { useSwitchChain, useAccount, useChainId, type Config } from 'wagmi';
 import type { Address } from 'viem';
 import { ContinueInWalletModal } from './ContinueInWalletModal';
 import { mainnet, sepolia, bsc, bscTestnet, solana, solanaDevnet } from './networks';
@@ -108,10 +108,12 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
 export const WalletKitConnectProvider = ({
   isMainnet = true,
   logo,
+  config,
   children,
 }: {
   isMainnet?: boolean;
   logo: React.ReactNode;
+  config: Config;
   children: React.ReactNode;
 }) => {
   const [connectError, setConnectError] = useState<Error | null>(null);
@@ -126,8 +128,6 @@ export const WalletKitConnectProvider = ({
   const { switchChainAsync } = useSwitchChain();
   const { isConnected: isEVMConnected } = useAccount();
   const currentChainId = useChainId();
-
-  const config = useWagmiConfig();
 
   const solanaProvider = useAppKitProvider<Provider>('solana');
 
@@ -200,6 +200,8 @@ export const WalletKitConnectProvider = ({
       if (!network) {
         throw Error('network not found');
       }
+
+      console.log(config, 'config');
 
       const balance = await getWagmiBalance(config, {
         address,

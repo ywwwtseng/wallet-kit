@@ -7,7 +7,9 @@ import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ConnectedWalletInfo } from '@reown/appkit';
 import * as web3 from '@ywwwtseng/web3';
 import { Address } from 'viem';
-export { clearLocalStorageByPrefix, clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT } from './utils.js';
+export { clearLocalStorageByPrefix, clearStoredJWT, getJWTExpirationTime, getSignMessage, getStoredJWT, initAppKit, isJWTExpired, parseJSON, storeJWT } from './utils.js';
+import '@reown/appkit-controllers';
+import '@wagmi/core';
 
 type Token = {
     id: string;

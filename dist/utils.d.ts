@@ -1,17 +1,17 @@
-import { CreateAppKit, createAppKit as createAppKit$1 } from '@reown/appkit/react';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import * as _reown_appkit_controllers from '@reown/appkit-controllers';
+import * as _wagmi_core from '@wagmi/core';
 import { AppKitNetwork } from '@reown/appkit/networks';
 
 declare const parseJSON: (src: unknown) => unknown;
-declare const createAppKit: ({ themeMode, projectId, networks, ssr, ...config }: {
-    themeMode?: "light" | "dark";
+declare function initAppKit({ projectId, themeMode, networks, ssr, ...rest }: {
     projectId: string;
+    themeMode?: 'light' | 'dark';
     networks: [AppKitNetwork, ...AppKitNetwork[]];
-    ssr: boolean;
-} & CreateAppKit) => {
-    config: typeof WagmiAdapter.prototype.wagmiConfig;
-    getWalletInfo: () => ReturnType<ReturnType<typeof createAppKit$1>["getWalletInfo"]>;
-    networks: AppKitNetwork[];
+    ssr?: boolean;
+    includeWalletIds?: string[];
+}): {
+    config: _wagmi_core.Config;
+    getWalletInfo: () => _reown_appkit_controllers.ConnectedWalletInfo;
 };
 declare function clearLocalStorageByPrefix(prefix: string): void;
 /**
@@ -46,4 +46,4 @@ declare function getJWTExpirationTime(token: string): number | null;
  */
 declare function isJWTExpired(token: string): boolean;
 
-export { clearLocalStorageByPrefix, clearStoredJWT, createAppKit, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT };
+export { clearLocalStorageByPrefix, clearStoredJWT, getJWTExpirationTime, getSignMessage, getStoredJWT, initAppKit, isJWTExpired, parseJSON, storeJWT };

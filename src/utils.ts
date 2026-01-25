@@ -1,8 +1,9 @@
-import { cookieStorage, createStorage } from '@wagmi/core';
+import { cookieStorage, createStorage, http } from '@wagmi/core';
+import type { Transport } from 'wagmi';
 import { createAppKit as createReownAppKit, type CreateAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana';
-import { solana } from './networks';
+import { solana, solanaDevnet } from './networks';
 import { JWT_TOKEN_KEY, JWT_ADDRESS_KEY } from './constants';
 import type { AppKitNetwork } from './types';
 
@@ -18,80 +19,48 @@ export const parseJSON = (src: unknown) => {
   }
 }
 
-export const createAppKit = (() => {
-  // 单例实例（使用闭包封装）
-  let instance: {
-    config: typeof WagmiAdapter.prototype.wagmiConfig;
-    getWalletInfo: () => ReturnType<ReturnType<typeof createReownAppKit>['getWalletInfo']>;
-    networks: AppKitNetwork[];
-  } | null = null;
+export function initAppKit({ projectId, themeMode = 'dark', networks, ssr = true, ...rest }: {
+  projectId: string;
+  themeMode?: 'light' | 'dark';
+  networks: [AppKitNetwork, ...AppKitNetwork[]];
+  ssr?: boolean;
+  includeWalletIds?: string[];
+}) {
+  const evmNetworks = networks.filter((n) => typeof n.id === 'number');
+  const hasSolana = networks.some((n) => n.id === solana.id || n.id === solanaDevnet.id);
 
-  return ({
+  const wagmiAdapter = new WagmiAdapter({
+    projectId,
+    networks: evmNetworks,
+    ssr,
+    ...(ssr
+      ? { storage: createStorage({ storage: cookieStorage }) }
+      : {}),
+    transports: evmNetworks.reduce((acc, n) => {
+      // 這裡 n.id 對 EVM 會是 number
+      acc[n.id as number] = http();
+      return acc;
+    }, {} as Record<number, Transport>),
+  });
+
+  const adapters = hasSolana
+    ? [wagmiAdapter, new SolanaAdapter()]
+    : [wagmiAdapter];
+
+  const modal = createReownAppKit({
     themeMode,
     projectId,
     networks,
-    ssr = false,
-    ...config
-  }: {
-    themeMode?: 'light' | 'dark';
-    projectId: string;
-    networks: [AppKitNetwork, ...AppKitNetwork[]];
-    ssr: boolean;
-  } & CreateAppKit) => {
-    // 如果已经创建了实例，检查网络配置是否匹配
-    if (instance) {
-      // 检查网络配置是否相同（通过比较网络 ID）
-      const existingNetworkIds = instance.networks.map(n => n.id).sort();
-      const newNetworkIds = networks.map(n => n.id).sort();
-      const networksMatch = 
-        existingNetworkIds.length === newNetworkIds.length &&
-        existingNetworkIds.every((id, index) => id === newNetworkIds[index]);
-      
-      if (!networksMatch) {
-        console.warn(
-          'createAppKit: Networks configuration has changed. ' +
-          'The existing instance will be reused, which may cause issues. ' +
-          'Please ensure createAppKit is called with the same networks configuration.'
-        );
-      }
-      
-      return instance;
-    }
+    adapters,
+    features: { email: false, socials: [] },
+    ...rest,
+  });
 
-    const wagmiAdapter = new WagmiAdapter({
-      projectId,
-      networks,
-      ssr,
-      ...(ssr ? {
-        storage: createStorage({
-          storage: cookieStorage
-        }),
-      } : {})
-    });
-
-    const solanaAdapter = new SolanaAdapter();
-
-    const modal = createReownAppKit({
-      themeMode,
-      projectId,
-      networks,
-      adapters: networks.includes(solana) ? [wagmiAdapter, solanaAdapter] : [wagmiAdapter],
-      features: {
-        email: false,
-        socials: [],
-      },
-      ...config,
-    });
-
-    instance = {
-      config: wagmiAdapter.wagmiConfig,
-      getWalletInfo: () => modal?.getWalletInfo(),
-      networks,
-    };
-
-    return instance;
+  return {
+    config: wagmiAdapter.wagmiConfig,
+    getWalletInfo: () => modal?.getWalletInfo(),
   };
-})();
+}
 
 export function clearLocalStorageByPrefix(prefix: string) {
   Object.keys(localStorage).forEach((key) => {

@@ -1,22 +1,22 @@
 import {
   clearLocalStorageByPrefix,
   clearStoredJWT,
-  createAppKit,
   getJWTExpirationTime,
   getSignMessage,
   getStoredJWT,
+  initAppKit,
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-7JNF4KQ2.js";
+} from "./chunk-IABD7XGZ.js";
 import "./chunk-DMT75HZL.js";
 export {
   clearLocalStorageByPrefix,
   clearStoredJWT,
-  createAppKit,
   getJWTExpirationTime,
   getSignMessage,
   getStoredJWT,
+  initAppKit,
   isJWTExpired,
   parseJSON,
   storeJWT

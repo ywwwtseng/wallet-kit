@@ -1,5 +1,3 @@
-import { createConfig, http } from 'wagmi';
-import { mainnet, bsc } from 'wagmi/chains';
 import { sendTransaction } from 'wagmi/actions';
 import { writeContract, type Config } from '@wagmi/core';
 import type { Address, Abi } from 'viem';
@@ -19,14 +17,6 @@ const ERC20_ABI = [
     outputs: [{ type: 'bool' }],
   },
 ] as Abi;
-
-export const config = createConfig({
-  chains: [mainnet, bsc],
-  transports: {
-    [mainnet.id]: http(),
-    [bsc.id]: http(),
-  },
-});
 
 export const sendWagmiTransaction = async (
   config: Config,
