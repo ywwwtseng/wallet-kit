@@ -7,7 +7,7 @@ import {
   useMemo,
   createContext,
 } from 'react';
-import { WagmiProvider, cookieToInitialState } from 'wagmi';
+import { WagmiProvider, cookieToInitialState, type Config } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import type { ConnectedWalletInfo } from '@reown/appkit';
@@ -33,6 +33,7 @@ export const WalletKitContext = createContext<WalletKitContextType>({
 });
 
 export const WalletKitProvider = ({
+  debug = false,
   isMainnet = true,
   config,
   cookies,
@@ -40,8 +41,9 @@ export const WalletKitProvider = ({
   children,
   getWalletInfo,
 }: {
+  debug?: boolean;
   isMainnet?: boolean;
-  config: typeof WagmiAdapter.prototype.wagmiConfig;
+  config: Config;
   cookies?: string | null;
   logo: React.ReactNode;
   children: React.ReactNode;
@@ -62,7 +64,7 @@ export const WalletKitProvider = ({
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config} initialState={initialState}>
         <WalletKitContext.Provider value={value}>
-          <WalletKitConnectProvider isMainnet={isMainnet} logo={logo} config={config}>
+          <WalletKitConnectProvider debug={debug} isMainnet={isMainnet} logo={logo}>
             {children}
           </WalletKitConnectProvider>
         </WalletKitContext.Provider>

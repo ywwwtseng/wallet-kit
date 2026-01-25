@@ -69,8 +69,6 @@ export function ContinueInWalletModal({
         >
           <div
             style={{
-              borderRadius: '8px',
-              border: '4px solid',
               animation: 'breathe 2s ease-in-out infinite',
             }}
           >
@@ -79,8 +77,6 @@ export function ContinueInWalletModal({
           {walletInfo && (
             <img
               style={{
-                borderRadius: '8px',
-                border: '4px solid',
                 animation: 'breathe-negative 2s ease-in-out infinite',
               }}
               width={48}

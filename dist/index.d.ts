@@ -3,13 +3,12 @@ export { AppKitNetwork, bsc, bscTestnet, mainnet, sepolia, solana, solanaDevnet 
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import * as react from 'react';
 import { Views } from '@reown/appkit/react';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { Config } from 'wagmi';
 import { ConnectedWalletInfo } from '@reown/appkit';
 import * as web3 from '@ywwwtseng/web3';
 import { Address } from 'viem';
 export { clearLocalStorageByPrefix, clearStoredJWT, getJWTExpirationTime, getSignMessage, getStoredJWT, initAppKit, isJWTExpired, parseJSON, storeJWT } from './utils.js';
 import '@reown/appkit-controllers';
-import '@wagmi/core';
 
 type Token = {
     id: string;
@@ -54,9 +53,10 @@ interface WalletKitContextType {
     getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }
 declare const WalletKitContext: react.Context<WalletKitContextType>;
-declare const WalletKitProvider: ({ isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+declare const WalletKitProvider: ({ debug, isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+    debug?: boolean;
     isMainnet?: boolean;
-    config: typeof WagmiAdapter.prototype.wagmiConfig;
+    config: Config;
     cookies?: string | null;
     logo: React.ReactNode;
     children: React.ReactNode;

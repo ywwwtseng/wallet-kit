@@ -1,6 +1,6 @@
 import { cookieStorage, createStorage, http } from '@wagmi/core';
 import type { Transport } from 'wagmi';
-import { createAppKit as createReownAppKit, type CreateAppKit } from '@reown/appkit/react';
+import { createAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana';
 import { solana, solanaDevnet } from './networks';
@@ -47,16 +47,19 @@ export function initAppKit({ projectId, themeMode = 'dark', networks, ssr = true
     ? [wagmiAdapter, new SolanaAdapter()]
     : [wagmiAdapter];
 
-  const modal = createReownAppKit({
+  const modal = createAppKit({
     themeMode,
     projectId,
     networks,
     adapters,
+    allWallets: 'HIDE',
+    debug: true,
     features: { email: false, socials: [] },
     ...rest,
   });
 
   return {
+    networks,
     config: wagmiAdapter.wagmiConfig,
     getWalletInfo: () => modal?.getWalletInfo(),
   };

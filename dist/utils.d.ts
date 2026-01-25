@@ -1,5 +1,5 @@
 import * as _reown_appkit_controllers from '@reown/appkit-controllers';
-import * as _wagmi_core from '@wagmi/core';
+import * as wagmi from 'wagmi';
 import { AppKitNetwork } from '@reown/appkit/networks';
 
 declare const parseJSON: (src: unknown) => unknown;
@@ -10,7 +10,8 @@ declare function initAppKit({ projectId, themeMode, networks, ssr, ...rest }: {
     ssr?: boolean;
     includeWalletIds?: string[];
 }): {
-    config: _wagmi_core.Config;
+    networks: [AppKitNetwork, ...AppKitNetwork[]];
+    config: wagmi.Config;
     getWalletInfo: () => _reown_appkit_controllers.ConnectedWalletInfo;
 };
 declare function clearLocalStorageByPrefix(prefix: string): void;

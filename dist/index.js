@@ -11,7 +11,7 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-IABD7XGZ.js";
+} from "./chunk-NXHCTNMM.js";
 import {
   bsc,
   bscTestnet,
@@ -46,10 +46,10 @@ function useConnect() {
 }
 
 // src/wagmi.ts
-import { sendTransaction } from "wagmi/actions";
+import { getBalance, sendTransaction } from "wagmi/actions";
+import { Actions } from "wagmi/tempo";
 import { writeContract } from "@wagmi/core";
 import { useConfig, useAccount } from "wagmi";
-import { getBalance } from "wagmi/actions";
 var ERC20_ABI = [
   {
     name: "transfer",
@@ -60,6 +60,20 @@ var ERC20_ABI = [
       { name: "amount", type: "uint256" }
     ],
     outputs: [{ type: "bool" }]
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "balance", type: "uint256" }]
+  },
+  {
+    type: "function",
+    name: "decimals",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }]
   }
 ];
 var sendWagmiTransaction = async (config, {
@@ -82,6 +96,21 @@ var sendWagmiTransaction = async (config, {
       value: typeof amount === "string" ? BigInt(amount) : amount,
       chainId
     });
+  }
+};
+var getWagmiBalance = async (config, { address, token, chainId }) => {
+  if (token) {
+    const balance = await Actions.token.getBalance(config, {
+      account: address,
+      token
+    });
+    return balance;
+  } else {
+    const balance = await getBalance(config, {
+      address,
+      chainId
+    });
+    return balance.value;
   }
 };
 
@@ -312,7 +341,7 @@ import {
 } from "@reown/appkit/react";
 import { useAppKitConnection } from "@reown/appkit-adapter-solana/react";
 import * as web3 from "@ywwwtseng/web3";
-import { useSwitchChain, useAccount as useAccount2, useChainId } from "wagmi";
+import { useSwitchChain, useConnection, useChainId, useConfig as useConfig2 } from "wagmi";
 
 // src/ContinueInWalletModal.tsx
 import { Modal, Typography } from "@ywwwtseng/react-kit";
@@ -382,8 +411,6 @@ function ContinueInWalletModal({
                   "div",
                   {
                     style: {
-                      borderRadius: "8px",
-                      border: "4px solid",
                       animation: "breathe 2s ease-in-out infinite"
                     },
                     children: logo
@@ -393,8 +420,6 @@ function ContinueInWalletModal({
                   "img",
                   {
                     style: {
-                      borderRadius: "8px",
-                      border: "4px solid",
                       animation: "breathe-negative 2s ease-in-out infinite"
                     },
                     width: 48,
@@ -533,11 +558,12 @@ var WalletKitConnectContext = createContext2({
   }
 });
 var WalletKitConnectProvider = ({
+  debug = false,
   isMainnet = true,
   logo,
-  config,
   children
 }) => {
+  const config = useConfig2();
   const [connectError, setConnectError] = useState3(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState3({});
@@ -547,8 +573,8 @@ var WalletKitConnectProvider = ({
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
   const accounts = useAccounts();
-  const { switchChainAsync } = useSwitchChain();
-  const { isConnected: isEVMConnected } = useAccount2();
+  const switchChain = useSwitchChain();
+  const { isConnected } = useConnection();
   const currentChainId = useChainId();
   const solanaProvider = useAppKitProvider("solana");
   const { open, isPending: isConnectPending } = useConnect();
@@ -611,13 +637,12 @@ var WalletKitConnectProvider = ({
       if (!network) {
         throw Error("network not found");
       }
-      console.log(config, "config");
-      const balance2 = await getBalance(config, {
+      const balance2 = await getWagmiBalance(config, {
         address,
         token: token.token_address ?? void 0,
         chainId: network.id
       });
-      setBalance({ [token.id]: String(balance2.value) });
+      setBalance({ [token.id]: String(balance2) });
     }
   };
   const createTransaction = useCallback3(
@@ -710,7 +735,7 @@ var WalletKitConnectProvider = ({
       if (!network) {
         throw Error("network not found");
       }
-      if (!isEVMConnected || !address) {
+      if (!isConnected || !address) {
         throw Error("EVM wallet not connected. Please connect an EVM wallet first.");
       }
       const chainId = network.id;
@@ -718,14 +743,18 @@ var WalletKitConnectProvider = ({
         throw Error(`Unsupported network: ${network}`);
       }
       if (currentChainId !== chainId) {
-        await switchChainAsync({ chainId });
+        await switchChain.mutateAsync({ chainId });
       }
-      return await sendWagmiTransaction(config, {
+      const hash = await sendWagmiTransaction(config, {
         tokenAddress: token.token_address,
         to: destination,
         amount: typeof amount === "string" ? BigInt(amount) : amount,
         chainId
       });
+      if (debug) {
+        console.log("[WalletKitConnectProvider] sendTransaction:", hash);
+      }
+      return hash;
     } catch (error) {
       console.error(error, "error");
       throw error;
@@ -797,6 +826,7 @@ var WalletKitContext = createContext3({
   getWalletInfo: () => void 0
 });
 var WalletKitProvider = ({
+  debug = false,
   isMainnet = true,
   config,
   cookies,
@@ -813,7 +843,7 @@ var WalletKitProvider = ({
       getWalletInfo
     ]
   );
-  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { isMainnet, logo, config, children }) }) }) });
+  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { debug, isMainnet, logo, children }) }) }) });
 };
 
 // src/hooks/useWalletKitConnect.ts

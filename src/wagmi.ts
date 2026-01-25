@@ -1,9 +1,9 @@
-import { sendTransaction } from 'wagmi/actions';
-import { writeContract, type Config } from '@wagmi/core';
+import { getBalance, sendTransaction } from 'wagmi/actions';
+import { Actions } from 'wagmi/tempo';
+import { writeContract, readContract, type Config } from '@wagmi/core';
 import type { Address, Abi } from 'viem';
 
 export { useConfig as useWagmiConfig, useAccount as useWagmiAccount } from 'wagmi';
-export { getBalance as getWagmiBalance } from 'wagmi/actions';
 
 const ERC20_ABI = [
   {
@@ -15,6 +15,20 @@ const ERC20_ABI = [
       { name: 'amount', type: 'uint256' },
     ],
     outputs: [{ type: 'bool' }],
+  },
+  {
+    type: 'function',
+    name: 'balanceOf',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: 'balance', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'decimals',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint8' }],
   },
 ] as Abi;
 
@@ -46,5 +60,23 @@ export const sendWagmiTransaction = async (
       value: typeof amount === 'string' ? BigInt(amount) : amount,
       chainId,
     });
+  }
+};
+
+export const getWagmiBalance = async (config: Config, { address, token, chainId }: { address: Address; token?: Address; chainId: number }) => {
+  if (token) {
+    const balance = await Actions.token.getBalance(config, {
+      account: address,
+      token: token,
+    });
+
+    return balance;
+  } else {
+    const balance = await getBalance(config, {
+      address,
+      chainId,
+    });
+
+    return balance.value;
   }
 };

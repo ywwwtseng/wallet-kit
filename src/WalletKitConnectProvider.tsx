@@ -19,14 +19,14 @@ import type { AppKitNetwork } from '@reown/appkit/networks';
 import { type Provider } from '@reown/appkit-adapter-solana';
 import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
 import type { Views } from '@reown/appkit/react';
+import { waitForTransactionReceipt } from 'wagmi/actions';
 import { WalletKitContext } from './WalletKitProvider';
 import * as web3 from '@ywwwtseng/web3';
-import { useSwitchChain, useAccount, useChainId, type Config } from 'wagmi';
+import { useSwitchChain, useConnection, useChainId, useConfig } from 'wagmi';
 import type { Address } from 'viem';
 import { ContinueInWalletModal } from './ContinueInWalletModal';
 import { mainnet, sepolia, bsc, bscTestnet, solana, solanaDevnet } from './networks';
 import { useAccounts, type Accounts } from './hooks/useAccounts';
-import { useWagmiConfig } from './wagmi';
 import { useConnect } from './hooks/useConnect';
 import { getWagmiBalance, sendWagmiTransaction } from './wagmi';
 import { clearLocalStorageByPrefix } from './utils';
@@ -106,16 +106,17 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
 });
 
 export const WalletKitConnectProvider = ({
+  debug = false,
   isMainnet = true,
   logo,
-  config,
   children,
 }: {
+  debug?: boolean;
   isMainnet?: boolean;
   logo: React.ReactNode;
-  config: Config;
   children: React.ReactNode;
 }) => {
+  const config = useConfig();
   const [connectError, setConnectError] = useState<Error | null>(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState<Record<string, string>>({});
@@ -125,8 +126,8 @@ export const WalletKitConnectProvider = ({
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
   const accounts = useAccounts();
-  const { switchChainAsync } = useSwitchChain();
-  const { isConnected: isEVMConnected } = useAccount();
+  const switchChain = useSwitchChain();
+  const { isConnected } = useConnection();
   const currentChainId = useChainId();
 
   const solanaProvider = useAppKitProvider<Provider>('solana');
@@ -201,15 +202,13 @@ export const WalletKitConnectProvider = ({
         throw Error('network not found');
       }
 
-      console.log(config, 'config');
-
       const balance = await getWagmiBalance(config, {
         address,
         token: (token.token_address ?? undefined) as Address | undefined,
         chainId: network.id as number,
       });
 
-      setBalance({ [token.id]: String(balance.value) });
+      setBalance({ [token.id]: String(balance) });
     }
   };
 
@@ -339,7 +338,7 @@ export const WalletKitConnectProvider = ({
 
       // EVM 链（ethereum、bsc）使用 wagmi
       // 检查 EVM 钱包是否已连接
-      if (!isEVMConnected || !address) {
+      if (!isConnected || !address) {
         throw Error('EVM wallet not connected. Please connect an EVM wallet first.');
       }
 
@@ -350,15 +349,27 @@ export const WalletKitConnectProvider = ({
       }
       // 只有在当前链不是目标链时才切换
       if (currentChainId !== chainId) {
-        await switchChainAsync({ chainId });
+        await switchChain.mutateAsync({ chainId });
       }
 
-      return await sendWagmiTransaction(config, {
+      const hash = await sendWagmiTransaction(config, {
         tokenAddress: token.token_address as Address | undefined,
         to: destination as Address,
         amount: typeof amount === 'string' ? BigInt(amount) : amount,
         chainId,
       });
+
+      if (debug) {
+        console.log('[WalletKitConnectProvider] sendTransaction:', hash);
+      }
+
+      // await waitForTransactionReceipt(config, {
+      //   hash,
+      //   retryCount: 10,
+      //   retryDelay: ({ count }) => Math.min(1000 * 2 ** count, 5000),
+      // });
+
+      return hash;
     } catch (error) {
       console.error(error, 'error');
       throw error;
