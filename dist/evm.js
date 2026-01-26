@@ -1,5 +1,11 @@
+import {
+  WalletKitConnectContext
+} from "./chunk-LVJKBXOP.js";
+import "./chunk-NXHCTNMM.js";
+import "./chunk-DMT75HZL.js";
+
 // src/evm.ts
-import { useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import { useConfig } from "wagmi";
 import { readContract, readContracts, writeContract, waitForTransactionReceipt } from "wagmi/actions";
 function useReadContract(params) {
@@ -48,11 +54,13 @@ function useWriteContract({
   onSuccess,
   onError
 }) {
+  const { openContinueInWalletModal } = use(WalletKitConnectContext);
   const config = useConfig();
   const [isLoading, setIsLoading] = useState(false);
   return {
     isLoading,
     writeContract: async (params) => {
+      openContinueInWalletModal(true);
       setIsLoading(true);
       try {
         const txHash = await writeContract(config, params);
@@ -64,6 +72,7 @@ function useWriteContract({
         onError?.(error);
         throw error;
       } finally {
+        openContinueInWalletModal(false);
         setIsLoading(false);
       }
     }

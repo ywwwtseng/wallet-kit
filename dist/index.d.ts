@@ -53,7 +53,8 @@ interface WalletKitContextType {
     getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }
 declare const WalletKitContext: react.Context<WalletKitContextType>;
-declare const WalletKitProvider: ({ debug, isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+declare const WalletKitProvider: ({ theme, debug, isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+    theme?: "light" | "dark";
     debug?: boolean;
     isMainnet?: boolean;
     config: Config;
@@ -86,6 +87,7 @@ interface WalletKitConnectContextState {
     accounts: Accounts;
     balance: Record<string, string>;
     currentChainId: number | undefined;
+    openContinueInWalletModal: (open: boolean) => void;
     getBalance: (token: Token) => Promise<void>;
     getNetwork: (network: string) => AppKitNetwork | undefined;
     connect: (options?: {

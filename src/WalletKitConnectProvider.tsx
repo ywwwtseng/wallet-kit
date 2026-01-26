@@ -40,6 +40,7 @@ export interface WalletKitConnectContextState {
   accounts: Accounts;
   balance: Record<string, string>;
   currentChainId: number | undefined;
+  openContinueInWalletModal: (open: boolean) => void;
   getBalance: (token: Token) => Promise<void>;
   getNetwork: (network: string) => AppKitNetwork | undefined;
   connect: (options?: { view?: Views }) => Promise<void>;
@@ -82,6 +83,9 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
   },
   balance: {},
   currentChainId: undefined,
+  openContinueInWalletModal: () => {
+    throw new Error('openContinueInWalletModal is not implemented');
+  },
   getBalance: () => {
     throw new Error('getBalance is not implemented');
   },
@@ -106,11 +110,13 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
 });
 
 export const WalletKitConnectProvider = ({
+  theme = 'dark',
   debug = false,
   isMainnet = true,
   logo,
   children,
 }: {
+  theme?: 'light' | 'dark';
   debug?: boolean;
   isMainnet?: boolean;
   logo: React.ReactNode;
@@ -122,13 +128,29 @@ export const WalletKitConnectProvider = ({
   const [balance, setBalance] = useState<Record<string, string>>({});
   const [continueInWalletModal, openContinueInWalletModal] = useState(false);
   const [isSendTxPending, setIsSendTxPending] = useState(false);
-  const { disconnect } = useDisconnect();
+  const { disconnect: d } = useDisconnect();
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
   const accounts = useAccounts();
   const switchChain = useSwitchChain();
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
+
+  const disconnect = useCallback(async (clearLocalStorage?: boolean) => {
+    await d();
+
+    if (clearLocalStorage) {
+      clearLocalStorageByPrefix('@appkit/');
+      clearLocalStorageByPrefix('wagmi.');
+    }
+    
+  }, [d]);
+
+  const delayOpenContinueInWalletModal = useCallback(() => {
+    setTimeout(() => {
+      openContinueInWalletModal(true);
+    }, 1500);
+  }, [openContinueInWalletModal]);
 
   const solanaProvider = useAppKitProvider<Provider>('solana');
 
@@ -388,17 +410,11 @@ export const WalletKitConnectProvider = ({
       isSendTxPending,
       error: connectError,
       currentChainId,
+      openContinueInWalletModal: delayOpenContinueInWalletModal,
       connect,
       getBalance,
       getNetwork,
-      disconnect: async (clearLocalStorage?: boolean) => {
-        await disconnect();
-
-        if (clearLocalStorage) {
-          clearLocalStorageByPrefix('@appkit/');
-          clearLocalStorageByPrefix('wagmi.');
-        }
-      },
+      disconnect,
       signTransaction,
       sendTransaction,
       switchNetwork,
@@ -411,6 +427,7 @@ export const WalletKitConnectProvider = ({
       isSendTxPending,
       currentChainId,
       connectError,
+      delayOpenContinueInWalletModal,
       connect,
       getBalance,
       getNetwork,
@@ -427,9 +444,10 @@ export const WalletKitConnectProvider = ({
       {continueInWalletModal && (
         <ContinueInWalletModal
           open
+          theme={theme}
           logo={logo}
-          getWalletInfoAction={() => getWalletInfo?.()}
-          onCloseAction={() => {
+          getWalletInfo={getWalletInfo}
+          onClose={() => {
             openContinueInWalletModal(false);
           }}
         />

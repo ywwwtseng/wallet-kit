@@ -1,4 +1,12 @@
 import {
+  WalletKitConnectContext,
+  WalletKitContext,
+  WalletKitProvider,
+  useAccount,
+  useConfig,
+  useConnect
+} from "./chunk-LVJKBXOP.js";
+import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
   Status,
@@ -22,99 +30,9 @@ import {
 } from "./chunk-DMT75HZL.js";
 
 // src/WalletKitAuthProvider.tsx
-import { useCallback as useCallback2, useEffect, useState as useState2, useMemo, createContext, useRef } from "react";
+import { useCallback, useEffect, useState, useMemo, createContext, useRef } from "react";
 import { useDisconnect } from "@reown/appkit/react";
 import { signMessage } from "wagmi/actions";
-
-// src/hooks/useConnect.ts
-import { useCallback, useState } from "react";
-import { useAppKit } from "@reown/appkit/react";
-function useConnect() {
-  const appKit = useAppKit();
-  const [isPending, setIsPending] = useState(false);
-  const open = useCallback(async (view) => {
-    setIsPending(true);
-    await appKit.open({
-      view: view ?? "AllWallets"
-    });
-    setIsPending(false);
-  }, []);
-  return {
-    open,
-    isPending
-  };
-}
-
-// src/wagmi.ts
-import { getBalance, sendTransaction } from "wagmi/actions";
-import { Actions } from "wagmi/tempo";
-import { writeContract } from "@wagmi/core";
-import { useConfig, useAccount } from "wagmi";
-var ERC20_ABI = [
-  {
-    name: "transfer",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" }
-    ],
-    outputs: [{ type: "bool" }]
-  },
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "balance", type: "uint256" }]
-  },
-  {
-    type: "function",
-    name: "decimals",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "uint8" }]
-  }
-];
-var sendWagmiTransaction = async (config, {
-  tokenAddress,
-  to,
-  amount,
-  chainId
-}) => {
-  if (tokenAddress) {
-    return await writeContract(config, {
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: "transfer",
-      chainId,
-      args: [to, typeof amount === "string" ? BigInt(amount) : amount]
-    });
-  } else {
-    return await sendTransaction(config, {
-      to,
-      value: typeof amount === "string" ? BigInt(amount) : amount,
-      chainId
-    });
-  }
-};
-var getWagmiBalance = async (config, { address, token, chainId }) => {
-  if (token) {
-    const balance = await Actions.token.getBalance(config, {
-      account: address,
-      token
-    });
-    return balance;
-  } else {
-    const balance = await getBalance(config, {
-      address,
-      chainId
-    });
-    return balance.value;
-  }
-};
-
-// src/WalletKitAuthProvider.tsx
 import { jsx } from "react/jsx-runtime";
 var WalletKitAuthContext = createContext({
   signIn: () => {
@@ -137,20 +55,20 @@ var WalletKitAuthProvider = ({
 }) => {
   const expirationTimerRef = useRef(null);
   const reconnectTimerRef = useRef(null);
-  const [jwtToken, setJwtToken] = useState2(null);
+  const [jwtToken, setJwtToken] = useState(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
   const ethersAccount = useAccount();
   const config = useConfig();
-  const [initialized, setInitialized] = useState2(false);
-  const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState2(false);
-  const [isSigningInProcessing, setIsSigningInProcessing] = useState2(false);
+  const [initialized, setInitialized] = useState(false);
+  const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState(false);
+  const [isSigningInProcessing, setIsSigningInProcessing] = useState(false);
   const status = useMemo(() => {
     if (!initialized || isLoggingOutProcessing || isSigningInProcessing) return "pending" /* PENDING */;
     if (!!jwtToken && !!ethersAccount.address) return "authenticated" /* AUTHENTICATED */;
     return "unauthenticated" /* UNAUTHENTICATED */;
   }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, ethersAccount.address]);
-  const signIn = useCallback2(
+  const signIn = useCallback(
     async (view) => {
       try {
         await open(view ?? "ConnectingWalletConnectBasic");
@@ -161,7 +79,7 @@ var WalletKitAuthProvider = ({
     },
     [open, ethersAccount.address, config]
   );
-  const signOut = useCallback2(async () => {
+  const signOut = useCallback(async () => {
     setIsLoggingOutProcessing(true);
     if (expirationTimerRef.current) {
       clearTimeout(expirationTimerRef.current);
@@ -172,7 +90,7 @@ var WalletKitAuthProvider = ({
     await disconnect();
     setIsLoggingOutProcessing(false);
   }, [appKey, disconnect]);
-  const setupExpirationTimer = useCallback2((token) => {
+  const setupExpirationTimer = useCallback((token) => {
     if (expirationTimerRef.current) {
       clearTimeout(expirationTimerRef.current);
       expirationTimerRef.current = null;
@@ -318,538 +236,10 @@ var WalletKitAuthProvider = ({
   return /* @__PURE__ */ jsx(WalletKitAuthContext.Provider, { value, children: typeof children === "function" ? children(value) : children });
 };
 
-// src/WalletKitProvider.tsx
-import {
-  useMemo as useMemo4,
-  createContext as createContext3
-} from "react";
-import { WagmiProvider, cookieToInitialState } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// src/WalletKitConnectProvider.tsx
-import {
-  use,
-  useState as useState3,
-  useMemo as useMemo3,
-  useCallback as useCallback3,
-  createContext as createContext2
-} from "react";
-import {
-  useAppKitProvider,
-  useDisconnect as useDisconnect2,
-  useAppKitNetwork
-} from "@reown/appkit/react";
-import { useAppKitConnection } from "@reown/appkit-adapter-solana/react";
-import * as web3 from "@ywwwtseng/web3";
-import { useSwitchChain, useConnection, useChainId, useConfig as useConfig2 } from "wagmi";
-
-// src/ContinueInWalletModal.tsx
-import { Modal, Typography } from "@ywwwtseng/react-kit";
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
-function ContinueInWalletModal({
-  logo,
-  open,
-  onCloseAction,
-  getWalletInfoAction
-}) {
-  const walletInfo = getWalletInfoAction();
-  const redirect = walletInfo?.redirect;
-  const deepLink = redirect?.native;
-  return /* @__PURE__ */ jsxs(Modal, { title: "wallet kit modal", open, onClose: onCloseAction, children: [
-    /* @__PURE__ */ jsx2(Typography, { size: "1", children: walletInfo?.name }),
-    /* @__PURE__ */ jsx2("style", { children: `
-        @keyframes breathe {
-
-          0%,
-          100% {
-            transform: translateX(15px);
-          }
-
-          50% {
-            transform: translateX(-15px);
-          }
-        }
-      ` }),
-    /* @__PURE__ */ jsx2("style", { children: `
-        @keyframes breathe-negative {
-
-          0%,
-          100% {
-            transform: translateX(-15px);
-          }
-
-          50% {
-            transform: translateX(15px);
-          }
-        }
-      ` }),
-    /* @__PURE__ */ jsxs(
-      "div",
-      {
-        style: {
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100%",
-          gap: "16px",
-          paddingTop: "16px",
-          paddingBottom: "16px"
-        },
-        children: [
-          /* @__PURE__ */ jsxs(
-            "div",
-            {
-              style: {
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "8px"
-              },
-              children: [
-                /* @__PURE__ */ jsx2(
-                  "div",
-                  {
-                    style: {
-                      animation: "breathe 2s ease-in-out infinite"
-                    },
-                    children: logo
-                  }
-                ),
-                walletInfo && /* @__PURE__ */ jsx2(
-                  "img",
-                  {
-                    style: {
-                      animation: "breathe-negative 2s ease-in-out infinite"
-                    },
-                    width: 48,
-                    height: 48,
-                    src: walletInfo.icon,
-                    alt: "wallet icon"
-                  }
-                )
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxs(
-            "div",
-            {
-              style: {
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "2px"
-              },
-              children: [
-                /* @__PURE__ */ jsxs(Typography, { size: "1", children: [
-                  "Continue in ",
-                  walletInfo?.name
-                ] }),
-                /* @__PURE__ */ jsx2(Typography, { size: "1", color: "var(--color-default, rgba(255, 255, 255, 0.50))", weight: 400, children: "Confirm transaction in your wallet" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxs(
-            "a",
-            {
-              style: {
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "8px",
-                paddingLeft: "12px",
-                paddingRight: "12px",
-                paddingTop: "6px",
-                paddingBottom: "6px",
-                fontSize: "12px",
-                border: "1px solid",
-                borderColor: "var(--color-secondary, #d1d5db)",
-                borderRadius: "4px",
-                textDecoration: "none",
-                color: "inherit"
-              },
-              href: deepLink,
-              target: "_blank",
-              rel: "noopener noreferrer",
-              children: [
-                /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-                  /* @__PURE__ */ jsx2("path", { d: "M15 3h6v6" }),
-                  /* @__PURE__ */ jsx2("path", { d: "M10 14 21 3" }),
-                  /* @__PURE__ */ jsx2("path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" })
-                ] }),
-                "Open"
-              ]
-            }
-          )
-        ]
-      }
-    )
-  ] });
-}
-
-// src/hooks/useAccounts.ts
-import { useMemo as useMemo2 } from "react";
-import { useAppKitAccount } from "@reown/appkit/react";
-function useAccounts() {
-  const solanaAccount = useAppKitAccount({ namespace: "solana" });
-  const ethersAccount = useAppKitAccount({ namespace: "eip155" });
-  return useMemo2(() => {
-    return {
-      bsc: {
-        address: ethersAccount.address,
-        status: ethersAccount.status
-      },
-      ethereum: {
-        address: ethersAccount.address,
-        status: ethersAccount.status
-      },
-      solana: {
-        address: solanaAccount.address,
-        status: solanaAccount.status
-      }
-    };
-  }, [solanaAccount, ethersAccount]);
-}
-
-// src/WalletKitConnectProvider.tsx
-import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
-var WalletKitConnectContext = createContext2({
-  isMainnet: true,
-  isConnectPending: false,
-  isSendTxPending: false,
-  error: null,
-  accounts: {
-    bsc: {
-      address: void 0,
-      status: void 0
-    },
-    ethereum: {
-      address: void 0,
-      status: void 0
-    },
-    solana: {
-      address: void 0,
-      status: void 0
-    }
-  },
-  balance: {},
-  currentChainId: void 0,
-  getBalance: () => {
-    throw new Error("getBalance is not implemented");
-  },
-  getNetwork: () => {
-    throw new Error("getNetwork is not implemented");
-  },
-  connect: () => {
-    throw new Error("connect is not implemented");
-  },
-  disconnect: () => {
-    throw new Error("disconnect is not implemented");
-  },
-  signTransaction: () => {
-    throw new Error("createTransaction is not implemented");
-  },
-  sendTransaction: () => {
-    throw new Error("sendTransaction is not implemented");
-  },
-  switchNetwork: () => {
-    throw new Error("switchNetwork is not implemented");
-  }
-});
-var WalletKitConnectProvider = ({
-  debug = false,
-  isMainnet = true,
-  logo,
-  children
-}) => {
-  const config = useConfig2();
-  const [connectError, setConnectError] = useState3(null);
-  const { getWalletInfo } = use(WalletKitContext);
-  const [balance, setBalance] = useState3({});
-  const [continueInWalletModal, openContinueInWalletModal] = useState3(false);
-  const [isSendTxPending, setIsSendTxPending] = useState3(false);
-  const { disconnect } = useDisconnect2();
-  const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
-  const { connection } = useAppKitConnection();
-  const accounts = useAccounts();
-  const switchChain = useSwitchChain();
-  const { isConnected } = useConnection();
-  const currentChainId = useChainId();
-  const solanaProvider = useAppKitProvider("solana");
-  const { open, isPending: isConnectPending } = useConnect();
-  const connect = useCallback3(async (options) => {
-    try {
-      await open(options?.view);
-    } catch (error) {
-      setConnectError(error instanceof Error ? error : new Error(String(error)));
-    }
-  }, [open]);
-  const getNetwork = useCallback3((network) => {
-    if (network === "bsc") {
-      return isMainnet ? bsc : bscTestnet;
-    } else if (network === "ethereum") {
-      return isMainnet ? mainnet : sepolia;
-    } else if (network === "solana") {
-      return isMainnet ? solana : solanaDevnet;
-    }
-    return void 0;
-  }, [isMainnet]);
-  const getAccountAddress = useCallback3((network) => {
-    if (network === "bsc") {
-      return accounts.bsc.address;
-    } else if (network === "ethereum") {
-      return accounts.ethereum.address;
-    } else if (network === "solana") {
-      return accounts.solana.address;
-    }
-    return void 0;
-  }, [accounts]);
-  const switchNetwork = async (network) => {
-    if (network === "bsc" || network === "ethereum") {
-      const targetNetwork = getNetwork(network);
-      if (!targetNetwork) {
-        throw new Error(`Network ${network} not found`);
-      }
-      await switchAppKitNetwork(targetNetwork);
-    }
-  };
-  const getBalance3 = async (token) => {
-    if (token.network === "solana") {
-      if (!connection || !accounts.solana.address) {
-        throw Error("user is disconnected");
-      }
-      const balance2 = await web3.getBalance({
-        network: token.network,
-        connection
-      })({
-        address: accounts.solana.address,
-        tokenAddress: token.token_address,
-        tokenProgram: token.token_program
-      });
-      setBalance({ [token.id]: String(balance2) });
-    } else {
-      const address = getAccountAddress(token.network);
-      if (!address) {
-        throw Error("user is disconnected");
-      }
-      const network = getNetwork(token.network);
-      if (!network) {
-        throw Error("network not found");
-      }
-      const balance2 = await getWagmiBalance(config, {
-        address,
-        token: token.token_address ?? void 0,
-        chainId: network.id
-      });
-      setBalance({ [token.id]: String(balance2) });
-    }
-  };
-  const createTransaction = useCallback3(
-    async ({
-      feePayer,
-      source,
-      token,
-      destination,
-      amount
-    }) => {
-      if (!accounts.solana || !connection)
-        throw Error("user is disconnected");
-      const transaction = await web3.utils.solana.createTransaction(
-        connection,
-        {
-          feePayer,
-          source,
-          destination,
-          mint: token.token_address,
-          amount,
-          tokenProgram: token.token_program
-        }
-      );
-      const latestBlockhash = await connection.getLatestBlockhash("finalized");
-      transaction.feePayer = new web3.solana.PublicKey(feePayer);
-      transaction.recentBlockhash = latestBlockhash.blockhash;
-      transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
-      return transaction;
-    },
-    [accounts.solana, solanaProvider, connection]
-  );
-  const signTransaction = useCallback3(
-    async ({
-      feePayer,
-      source,
-      token,
-      destination,
-      amount
-    }) => {
-      try {
-        if (!accounts.solana || !connection)
-          throw Error("user is disconnected");
-        openContinueInWalletModal(true);
-        const transaction = await createTransaction({
-          feePayer,
-          source,
-          token,
-          destination,
-          amount
-        });
-        const signedTransaction = await solanaProvider.walletProvider.signTransaction(transaction);
-        return signedTransaction;
-      } catch (error) {
-        console.error(error);
-        throw error;
-      } finally {
-        openContinueInWalletModal(false);
-      }
-    },
-    [accounts.solana, solanaProvider, connection]
-  );
-  const sendTransaction2 = async ({
-    feePayer,
-    source,
-    token,
-    destination,
-    amount
-  }) => {
-    try {
-      setIsSendTxPending(true);
-      openContinueInWalletModal(true);
-      if (token.network === "solana") {
-        if (!connection) {
-          throw Error("Solana connection not available");
-        }
-        const signature = await solanaProvider.walletProvider.sendTransaction(
-          await createTransaction({
-            feePayer,
-            source,
-            token,
-            destination,
-            amount
-          }),
-          connection
-        );
-        return signature;
-      }
-      const network = getNetwork(token.network);
-      const address = getAccountAddress(token.network);
-      if (!network) {
-        throw Error("network not found");
-      }
-      if (!isConnected || !address) {
-        throw Error("EVM wallet not connected. Please connect an EVM wallet first.");
-      }
-      const chainId = network.id;
-      if (!chainId) {
-        throw Error(`Unsupported network: ${network}`);
-      }
-      if (currentChainId !== chainId) {
-        await switchChain.mutateAsync({ chainId });
-      }
-      const hash = await sendWagmiTransaction(config, {
-        tokenAddress: token.token_address,
-        to: destination,
-        amount: typeof amount === "string" ? BigInt(amount) : amount,
-        chainId
-      });
-      if (debug) {
-        console.log("[WalletKitConnectProvider] sendTransaction:", hash);
-      }
-      return hash;
-    } catch (error) {
-      console.error(error, "error");
-      throw error;
-    } finally {
-      setIsSendTxPending(false);
-      openContinueInWalletModal(false);
-    }
-  };
-  const value = useMemo3(
-    () => ({
-      isMainnet,
-      accounts,
-      balance,
-      isConnectPending,
-      isSendTxPending,
-      error: connectError,
-      currentChainId,
-      connect,
-      getBalance: getBalance3,
-      getNetwork,
-      disconnect: async (clearLocalStorage) => {
-        await disconnect();
-        if (clearLocalStorage) {
-          clearLocalStorageByPrefix("@appkit/");
-          clearLocalStorageByPrefix("wagmi.");
-        }
-      },
-      signTransaction,
-      sendTransaction: sendTransaction2,
-      switchNetwork
-    }),
-    [
-      isMainnet,
-      accounts,
-      balance,
-      isConnectPending,
-      isSendTxPending,
-      currentChainId,
-      connectError,
-      connect,
-      getBalance3,
-      getNetwork,
-      disconnect,
-      signTransaction,
-      sendTransaction2,
-      switchNetwork
-    ]
-  );
-  return /* @__PURE__ */ jsxs2(WalletKitConnectContext.Provider, { value, children: [
-    children,
-    continueInWalletModal && /* @__PURE__ */ jsx3(
-      ContinueInWalletModal,
-      {
-        open: true,
-        logo,
-        getWalletInfoAction: () => getWalletInfo?.(),
-        onCloseAction: () => {
-          openContinueInWalletModal(false);
-        }
-      }
-    )
-  ] });
-};
-
-// src/WalletKitProvider.tsx
-import { jsx as jsx4 } from "react/jsx-runtime";
-var queryClient = new QueryClient();
-var WalletKitContext = createContext3({
-  getWalletInfo: () => void 0
-});
-var WalletKitProvider = ({
-  debug = false,
-  isMainnet = true,
-  config,
-  cookies,
-  logo,
-  children,
-  getWalletInfo
-}) => {
-  const initialState = cookieToInitialState(config, cookies);
-  const value = useMemo4(
-    () => ({
-      getWalletInfo
-    }),
-    [
-      getWalletInfo
-    ]
-  );
-  return /* @__PURE__ */ jsx4(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx4(WagmiProvider, { config, initialState, children: /* @__PURE__ */ jsx4(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx4(WalletKitConnectProvider, { debug, isMainnet, logo, children }) }) }) });
-};
-
 // src/hooks/useWalletKitConnect.ts
-import { use as use2 } from "react";
+import { use } from "react";
 function useWalletKitConnect() {
-  const context = use2(WalletKitConnectContext);
+  const context = use(WalletKitConnectContext);
   if (!context) {
     throw new Error("useWalletKitConnect must be used within a WalletKitProvider");
   }
@@ -857,9 +247,9 @@ function useWalletKitConnect() {
 }
 
 // src/hooks/useWalletKitAuth.ts
-import { use as use3 } from "react";
+import { use as use2 } from "react";
 function useWalletKitAuth() {
-  const context = use3(WalletKitAuthContext);
+  const context = use2(WalletKitAuthContext);
   if (!context) {
     throw new Error("useWalletKitAuth must be used within a WalletKitAuthProvider");
   }

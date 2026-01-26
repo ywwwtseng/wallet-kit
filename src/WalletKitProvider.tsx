@@ -33,6 +33,7 @@ export const WalletKitContext = createContext<WalletKitContextType>({
 });
 
 export const WalletKitProvider = ({
+  theme = 'dark',
   debug = false,
   isMainnet = true,
   config,
@@ -41,6 +42,7 @@ export const WalletKitProvider = ({
   children,
   getWalletInfo,
 }: {
+  theme?: 'light' | 'dark';
   debug?: boolean;
   isMainnet?: boolean;
   config: Config;
@@ -64,7 +66,7 @@ export const WalletKitProvider = ({
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config} initialState={initialState}>
         <WalletKitContext.Provider value={value}>
-          <WalletKitConnectProvider debug={debug} isMainnet={isMainnet} logo={logo}>
+          <WalletKitConnectProvider debug={debug} isMainnet={isMainnet} logo={logo} theme={theme}>
             {children}
           </WalletKitConnectProvider>
         </WalletKitContext.Provider>

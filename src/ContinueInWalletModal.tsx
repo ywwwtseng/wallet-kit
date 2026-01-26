@@ -4,22 +4,28 @@ import { Modal, Typography } from '@ywwwtseng/react-kit';
 import type { ConnectedWalletInfo } from '@reown/appkit';
 
 export function ContinueInWalletModal({
+  theme = 'dark',
   logo,
   open,
-  onCloseAction,
-  getWalletInfoAction,
+  onClose,
+  getWalletInfo,
 }: {
+  theme?: 'light' | 'dark';
   logo: React.ReactNode;
   open: boolean;
-  onCloseAction: () => void;
-  getWalletInfoAction: () => ConnectedWalletInfo | undefined;
+  onClose: () => void;
+  getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }) {
-  const walletInfo = getWalletInfoAction();
+  const walletInfo = getWalletInfo?.();
   const redirect = walletInfo?.redirect as { native?: string } | undefined;
   const deepLink = redirect?.native;
 
+  if (walletInfo.type === 'INJECTED') {
+    return null;
+  }
+
   return (
-    <Modal title="wallet kit modal" open={open} onClose={onCloseAction}>
+    <Modal title="wallet kit modal" open={open} onClose={onClose}>
       <Typography size="1">{walletInfo?.name}</Typography>
       <style>{`
         @keyframes breathe {
@@ -96,7 +102,7 @@ export function ContinueInWalletModal({
           }}
         >
           <Typography size="1">Continue in {walletInfo?.name}</Typography>
-          <Typography size="1" color="var(--color-default, rgba(255, 255, 255, 0.50))" weight={400}>
+          <Typography size="1" color={theme === 'dark' ? 'rgba(255, 255, 255, 0.50)' : 'rgba(0, 0, 0, 0.50)'} weight={400}>
             Confirm transaction in your wallet
           </Typography>
         </div>
@@ -112,10 +118,10 @@ export function ContinueInWalletModal({
             paddingBottom: '6px',
             fontSize: '12px',
             border: '1px solid',
-            borderColor: 'var(--color-secondary, #d1d5db)',
+            borderColor: theme === 'dark' ? '#d1d5db' : '#d1d5db',
             borderRadius: '4px',
             textDecoration: 'none',
-            color: 'inherit',
+            color: theme === 'dark' ? '#ffffff' : '#000000',
           }}
           href={deepLink}
           target="_blank"

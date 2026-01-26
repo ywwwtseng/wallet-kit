@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { use, useState, useEffect, useCallback } from 'react';
 import { useConfig } from 'wagmi';
 import { readContract, readContracts, writeContract, waitForTransactionReceipt } from 'wagmi/actions';
+import { WalletKitConnectContext } from './WalletKitConnectProvider';
 
 export function useReadContract(params: any) {
   const config = useConfig();
@@ -63,12 +64,14 @@ export function useWriteContract({
   onSuccess?: (receipt: Awaited<ReturnType<typeof waitForTransactionReceipt>>) => void;
   onError?: (error: Error) => void;
 }) {
+  const { openContinueInWalletModal } = use(WalletKitConnectContext);
   const config = useConfig();
   const [isLoading, setIsLoading] = useState(false);
   
   return {
     isLoading,
     writeContract: async (params: any) => {
+      openContinueInWalletModal(true);
       setIsLoading(true);
       try {
         const txHash = await writeContract(config, params as any);
@@ -80,6 +83,7 @@ export function useWriteContract({
         onError?.(error);
         throw error;
       } finally {
+        openContinueInWalletModal(false);
         setIsLoading(false);
       }
     }
