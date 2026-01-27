@@ -1,6 +1,6 @@
 import {
   WalletKitConnectContext
-} from "./chunk-LVJKBXOP.js";
+} from "./chunk-MTYAIATI.js";
 import "./chunk-NXHCTNMM.js";
 import "./chunk-DMT75HZL.js";
 

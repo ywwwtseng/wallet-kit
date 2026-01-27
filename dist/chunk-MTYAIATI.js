@@ -609,6 +609,7 @@ var WalletKitConnectProvider = ({
         logo,
         getWalletInfo,
         onClose: () => {
+          setIsSendTxPending(false);
           openContinueInWalletModal(false);
         }
       }
