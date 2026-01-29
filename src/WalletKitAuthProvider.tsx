@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, useMemo, createContext, useRef } from
 import type { Address } from 'viem';
 import { type Views, useDisconnect } from '@reown/appkit/react';
 import { signMessage } from 'wagmi/actions';
+import { useAccounts } from './hooks/useAccounts';
 import { useConnect } from './hooks/useConnect';
 import { useWagmiConfig, useWagmiAccount } from './wagmi';
 import { getStoredJWT, clearStoredJWT, storeJWT, getSignMessage, isJWTExpired, getJWTExpirationTime } from './utils';
@@ -49,7 +50,7 @@ export const WalletKitAuthProvider = ({
   const [jwtToken, setJwtToken] = useState<string | null>(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
-  const ethersAccount = useWagmiAccount();
+  const accounts = useAccounts();
 
   const config = useWagmiConfig();
   const [initialized, setInitialized] = useState(false);
@@ -58,9 +59,9 @@ export const WalletKitAuthProvider = ({
 
   const status = useMemo(() => {
     if (!initialized || isLoggingOutProcessing || isSigningInProcessing) return Status.PENDING;
-    if (!!jwtToken && !!ethersAccount.address) return Status.AUTHENTICATED;
+    if (!!jwtToken && !!accounts.bsc.address) return Status.AUTHENTICATED;
     return Status.UNAUTHENTICATED;
-  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, ethersAccount.address]);
+  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, accounts.bsc.address]);
 
   const signIn = useCallback(
     async (view?: Views) => {
@@ -72,7 +73,7 @@ export const WalletKitAuthProvider = ({
         throw error;
       }
     },
-    [open, ethersAccount.address, config]
+    [open, accounts.bsc.address, config]
   );
 
   const signOut = useCallback(async () => {
@@ -123,26 +124,24 @@ export const WalletKitAuthProvider = ({
   useEffect(() => {
     if (isLoggingOutProcessing) return;
 
-    // 只在正在连接且有地址时才跳过（避免断开连接过程中的 connecting 状态阻止初始化）
-    if (ethersAccount.status !== 'connected') {
-      if (!reconnectTimerRef.current) {
-        reconnectTimerRef.current = setTimeout(async () => {
-          await signOut();
-          setInitialized(true);
-        }, 5000);
-      }
+    console.log('accounts.bsc.status', accounts.bsc.status, accounts.bsc.address);
 
+    if (accounts.bsc.status === 'reconnecting' || accounts.bsc.status === 'connecting') {
+      return;
+    }
+
+    // 只在正在连接且有地址时才跳过（避免断开连接过程中的 connecting 状态阻止初始化）
+    if (!initialized && accounts.bsc.status === 'disconnected') {
+      signOut().then(() => {
+        setInitialized(true);
+      });
       return;
     };
 
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
     setInitialized(false);
     const stored = getStoredJWT(appKey);
 
-    if (stored && stored.address === ethersAccount.address) {
+    if (stored && stored.address === accounts.bsc.address) {
       // 检查 token 是否过期
       if (isJWTExpired(stored.token)) {
         clearStoredJWT(appKey);
@@ -151,22 +150,22 @@ export const WalletKitAuthProvider = ({
         setJwtToken(stored.token);
         setupExpirationTimer(stored.token);
       }
-    } else if (stored && stored.address !== ethersAccount.address) {
-      console.log('钱包地址不匹配，清除 JWT token', stored.address, ethersAccount.address);
+    } else if (stored && stored.address !== accounts.bsc.address) {
+      console.log('钱包地址不匹配，清除 JWT token', stored.address, accounts.bsc.address);
       // 地址不匹配，清除旧的 token
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
 
     setInitialized(true);
-  }, [ethersAccount.status, ethersAccount.address, isLoggingOutProcessing, setupExpirationTimer, appKey]);
+  }, [initialized, accounts.bsc.status, accounts.bsc.address, isLoggingOutProcessing, setupExpirationTimer, appKey]);
 
   // 当钱包断开连接时，清除 JWT token
   useEffect(() => {
     if (isLoggingOutProcessing) return;
 
-    if (!ethersAccount.address && jwtToken) {
-      console.log('钱包断开连接，清除 JWT token', ethersAccount.address, ethersAccount.status);
+    if (!accounts.bsc.address && jwtToken) {
+      console.log('钱包断开连接，清除 JWT token', accounts.bsc.address, accounts.bsc.status);
       // 清除定时器
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
@@ -175,26 +174,26 @@ export const WalletKitAuthProvider = ({
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
-  }, [ethersAccount.address, jwtToken, isLoggingOutProcessing]);
+  }, [accounts.bsc.address, jwtToken, isLoggingOutProcessing]);
 
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    if (ethersAccount.status !== 'connected') return;
+    if (accounts.bsc.status !== 'connected') return;
 
 
-    if (initialized && ethersAccount.address && !jwtToken) {
+    if (initialized && accounts.bsc.address && !jwtToken) {
 
       (async () => {
         try {
           // 2. 等待钱包连接
-          if (!ethersAccount.address) {
+          if (!accounts.bsc.address) {
             throw new Error('Wallet not connected');
           }
 
           setIsSigningInProcessing(true);
 
           // 3. 从后端获取签名消息和 nonce
-          const { message, nonce } = await getSignMessage(url,ethersAccount.address);
+          const { message, nonce } = await getSignMessage(url,accounts.bsc.address);
 
           // 4. 使用钱包签名消息
           // wagmi 的 signMessage 会自动从 config 中获取 provider
@@ -204,7 +203,7 @@ export const WalletKitAuthProvider = ({
 
           const signature = await signMessage(config, {
             message,
-            account: ethersAccount.address as Address,
+            account: accounts.bsc.address as Address,
           });
 
           // 5. 发送签名到后端 API 获取 JWT token
@@ -217,7 +216,7 @@ export const WalletKitAuthProvider = ({
               type: 'mutate',
               action: 'auth:signin',
               payload: {
-                address: ethersAccount.address,
+                address: accounts.bsc.address,
                 message,
                 signature,
                 nonce,
@@ -251,7 +250,7 @@ export const WalletKitAuthProvider = ({
       })();
 
     }
-  }, [initialized, ethersAccount.status, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
+  }, [initialized, accounts.bsc.status, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
 
   // 组件卸载时清理定时器
   useEffect(() => {
@@ -272,8 +271,8 @@ export const WalletKitAuthProvider = ({
     isLoggingOutProcessing,
     jwtToken,
     status,
-    address: ethersAccount.address,
-  }), [signIn, signOut, isSigningInProcessing, isLoggingOutProcessing, jwtToken, status, ethersAccount.address]);
+    address: accounts.bsc.address,
+  }), [signIn, signOut, isSigningInProcessing, isLoggingOutProcessing, jwtToken, status, accounts.bsc.address]);
 
   if (!initialized) {
     return null;

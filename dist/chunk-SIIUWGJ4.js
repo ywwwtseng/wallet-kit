@@ -12,7 +12,7 @@ import {
 
 // src/WalletKitProvider.tsx
 import {
-  useMemo as useMemo3,
+  useMemo as useMemo4,
   createContext as createContext2
 } from "react";
 import { WagmiProvider, cookieToInitialState } from "wagmi";
@@ -21,8 +21,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // src/WalletKitConnectProvider.tsx
 import {
   use,
-  useState as useState2,
-  useMemo as useMemo2,
+  useState as useState4,
+  useMemo as useMemo3,
   useCallback as useCallback2,
   createContext
 } from "react";
@@ -185,35 +185,149 @@ function ContinueInWalletModal({
 }
 
 // src/hooks/useAccounts.ts
-import { useMemo } from "react";
+import { useMemo as useMemo2 } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
+
+// src/hooks/useFinalizedAppKitStatus.ts
+import { useEffect, useMemo, useRef, useState } from "react";
+function useFinalizedAppKitStatus(status, opts) {
+  const settleMs = opts?.settleMs ?? 600;
+  const [stable, setStable] = useState(void 0);
+  const countRef = useRef(null);
+  const timerRef = useRef(null);
+  const lastStatusRef = useRef(void 0);
+  useEffect(() => {
+    if (!status) {
+      countRef.current = null;
+      lastStatusRef.current = void 0;
+      setStable(void 0);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+    const lastStatus = lastStatusRef.current;
+    const statusChanged = lastStatus !== status;
+    if (status !== "connected" && status !== "disconnected") {
+      if (countRef.current) {
+        countRef.current = null;
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      }
+      lastStatusRef.current = status;
+      return;
+    }
+    const stableStatus = status;
+    if (statusChanged) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      if (countRef.current && countRef.current.status !== stableStatus) {
+        countRef.current = null;
+      }
+      if (!countRef.current) {
+        countRef.current = {
+          status: stableStatus,
+          count: 1
+        };
+        const savedStatus = stableStatus;
+        timerRef.current = setTimeout(() => {
+          if (countRef.current && countRef.current.count === 1 && countRef.current.status === savedStatus) {
+            setStable(countRef.current.status);
+            countRef.current = null;
+            timerRef.current = null;
+          }
+        }, settleMs);
+      } else if (countRef.current.status === stableStatus) {
+        countRef.current.count += 1;
+        setStable(stableStatus);
+        countRef.current = null;
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      }
+    } else {
+      if (countRef.current && countRef.current.status === stableStatus && !timerRef.current) {
+        const savedStatus = stableStatus;
+        timerRef.current = setTimeout(() => {
+          if (countRef.current && countRef.current.count === 1 && countRef.current.status === savedStatus) {
+            setStable(countRef.current.status);
+            countRef.current = null;
+            timerRef.current = null;
+          }
+        }, settleMs);
+      } else if (!countRef.current && !timerRef.current) {
+        countRef.current = {
+          status: stableStatus,
+          count: 1
+        };
+        const savedStatus = stableStatus;
+        timerRef.current = setTimeout(() => {
+          if (countRef.current && countRef.current.count === 1 && countRef.current.status === savedStatus) {
+            setStable(countRef.current.status);
+            countRef.current = null;
+            timerRef.current = null;
+          }
+        }, settleMs);
+      }
+    }
+    lastStatusRef.current = status;
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [status, settleMs]);
+  return useMemo(() => {
+    if (stable) {
+      return stable;
+    }
+    if (typeof window === "undefined") {
+      return void 0;
+    }
+    const connection_status = localStorage.getItem("@appkit/connection_status");
+    if (connection_status) {
+      return connection_status === "disconnected" ? "reconnecting" : "connecting";
+    }
+    return void 0;
+  }, [stable]);
+}
+
+// src/hooks/useAccounts.ts
 function useAccounts() {
   const solanaAccount = useAppKitAccount({ namespace: "solana" });
   const ethersAccount = useAppKitAccount({ namespace: "eip155" });
-  return useMemo(() => {
+  const finalizedStatus = useFinalizedAppKitStatus(ethersAccount.status);
+  return useMemo2(() => {
     return {
       bsc: {
         address: ethersAccount.address,
-        status: ethersAccount.status
+        status: finalizedStatus
       },
       ethereum: {
         address: ethersAccount.address,
-        status: ethersAccount.status
+        status: finalizedStatus
       },
       solana: {
         address: solanaAccount.address,
         status: solanaAccount.status
       }
     };
-  }, [solanaAccount, ethersAccount]);
+  }, [solanaAccount, ethersAccount, finalizedStatus]);
 }
 
 // src/hooks/useConnect.ts
-import { useCallback, useState } from "react";
+import { useCallback, useState as useState3 } from "react";
 import { useAppKit } from "@reown/appkit/react";
 function useConnect() {
   const appKit = useAppKit();
-  const [isPending, setIsPending] = useState(false);
+  const [isPending, setIsPending] = useState3(false);
   const open = useCallback(async (view) => {
     setIsPending(true);
     await appKit.open({
@@ -352,11 +466,11 @@ var WalletKitConnectProvider = ({
   children
 }) => {
   const config = useConfig2();
-  const [connectError, setConnectError] = useState2(null);
+  const [connectError, setConnectError] = useState4(null);
   const { getWalletInfo } = use(WalletKitContext);
-  const [balance, setBalance] = useState2({});
-  const [continueInWalletModal, openContinueInWalletModal] = useState2(false);
-  const [isSendTxPending, setIsSendTxPending] = useState2(false);
+  const [balance, setBalance] = useState4({});
+  const [continueInWalletModal, openContinueInWalletModal] = useState4(false);
+  const [isSendTxPending, setIsSendTxPending] = useState4(false);
   const { disconnect: d } = useDisconnect();
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
@@ -563,7 +677,7 @@ var WalletKitConnectProvider = ({
       openContinueInWalletModal(false);
     }
   };
-  const value = useMemo2(
+  const value = useMemo3(
     () => ({
       isMainnet,
       accounts,
@@ -634,7 +748,7 @@ var WalletKitProvider = ({
   getWalletInfo
 }) => {
   const initialState = cookieToInitialState(config, cookies);
-  const value = useMemo3(
+  const value = useMemo4(
     () => ({
       getWalletInfo
     }),
@@ -648,8 +762,8 @@ var WalletKitProvider = ({
 export {
   WalletKitContext,
   WalletKitProvider,
+  useAccounts,
   useConnect,
   useConfig,
-  useAccount,
   WalletKitConnectContext
 };

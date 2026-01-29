@@ -2,10 +2,10 @@ import {
   WalletKitConnectContext,
   WalletKitContext,
   WalletKitProvider,
-  useAccount,
+  useAccounts,
   useConfig,
   useConnect
-} from "./chunk-MTYAIATI.js";
+} from "./chunk-SIIUWGJ4.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -58,16 +58,16 @@ var WalletKitAuthProvider = ({
   const [jwtToken, setJwtToken] = useState(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
-  const ethersAccount = useAccount();
+  const accounts = useAccounts();
   const config = useConfig();
   const [initialized, setInitialized] = useState(false);
   const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState(false);
   const [isSigningInProcessing, setIsSigningInProcessing] = useState(false);
   const status = useMemo(() => {
     if (!initialized || isLoggingOutProcessing || isSigningInProcessing) return "pending" /* PENDING */;
-    if (!!jwtToken && !!ethersAccount.address) return "authenticated" /* AUTHENTICATED */;
+    if (!!jwtToken && !!accounts.bsc.address) return "authenticated" /* AUTHENTICATED */;
     return "unauthenticated" /* UNAUTHENTICATED */;
-  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, ethersAccount.address]);
+  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, accounts.bsc.address]);
   const signIn = useCallback(
     async (view) => {
       try {
@@ -77,7 +77,7 @@ var WalletKitAuthProvider = ({
         throw error;
       }
     },
-    [open, ethersAccount.address, config]
+    [open, accounts.bsc.address, config]
   );
   const signOut = useCallback(async () => {
     setIsLoggingOutProcessing(true);
@@ -114,23 +114,20 @@ var WalletKitAuthProvider = ({
   }, [appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    if (ethersAccount.status !== "connected") {
-      if (!reconnectTimerRef.current) {
-        reconnectTimerRef.current = setTimeout(async () => {
-          await signOut();
-          setInitialized(true);
-        }, 5e3);
-      }
+    console.log("accounts.bsc.status", accounts.bsc.status, accounts.bsc.address);
+    if (accounts.bsc.status === "reconnecting" || accounts.bsc.status === "connecting") {
+      return;
+    }
+    if (!initialized && accounts.bsc.status === "disconnected") {
+      signOut().then(() => {
+        setInitialized(true);
+      });
       return;
     }
     ;
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
     setInitialized(false);
     const stored = getStoredJWT(appKey);
-    if (stored && stored.address === ethersAccount.address) {
+    if (stored && stored.address === accounts.bsc.address) {
       if (isJWTExpired(stored.token)) {
         clearStoredJWT(appKey);
         setJwtToken(null);
@@ -138,17 +135,17 @@ var WalletKitAuthProvider = ({
         setJwtToken(stored.token);
         setupExpirationTimer(stored.token);
       }
-    } else if (stored && stored.address !== ethersAccount.address) {
-      console.log("\u94B1\u5305\u5730\u5740\u4E0D\u5339\u914D\uFF0C\u6E05\u9664 JWT token", stored.address, ethersAccount.address);
+    } else if (stored && stored.address !== accounts.bsc.address) {
+      console.log("\u94B1\u5305\u5730\u5740\u4E0D\u5339\u914D\uFF0C\u6E05\u9664 JWT token", stored.address, accounts.bsc.address);
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
     setInitialized(true);
-  }, [ethersAccount.status, ethersAccount.address, isLoggingOutProcessing, setupExpirationTimer, appKey]);
+  }, [initialized, accounts.bsc.status, accounts.bsc.address, isLoggingOutProcessing, setupExpirationTimer, appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    if (!ethersAccount.address && jwtToken) {
-      console.log("\u94B1\u5305\u65AD\u5F00\u8FDE\u63A5\uFF0C\u6E05\u9664 JWT token", ethersAccount.address, ethersAccount.status);
+    if (!accounts.bsc.address && jwtToken) {
+      console.log("\u94B1\u5305\u65AD\u5F00\u8FDE\u63A5\uFF0C\u6E05\u9664 JWT token", accounts.bsc.address, accounts.bsc.status);
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;
@@ -156,24 +153,24 @@ var WalletKitAuthProvider = ({
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
-  }, [ethersAccount.address, jwtToken, isLoggingOutProcessing]);
+  }, [accounts.bsc.address, jwtToken, isLoggingOutProcessing]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    if (ethersAccount.status !== "connected") return;
-    if (initialized && ethersAccount.address && !jwtToken) {
+    if (accounts.bsc.status !== "connected") return;
+    if (initialized && accounts.bsc.address && !jwtToken) {
       (async () => {
         try {
-          if (!ethersAccount.address) {
+          if (!accounts.bsc.address) {
             throw new Error("Wallet not connected");
           }
           setIsSigningInProcessing(true);
-          const { message, nonce } = await getSignMessage(url, ethersAccount.address);
+          const { message, nonce } = await getSignMessage(url, accounts.bsc.address);
           if (!config) {
             throw new Error("Wagmi config not available");
           }
           const signature = await signMessage(config, {
             message,
-            account: ethersAccount.address
+            account: accounts.bsc.address
           });
           const response = await fetch(url, {
             method: "POST",
@@ -184,7 +181,7 @@ var WalletKitAuthProvider = ({
               type: "mutate",
               action: "auth:signin",
               payload: {
-                address: ethersAccount.address,
+                address: accounts.bsc.address,
                 message,
                 signature,
                 nonce
@@ -211,7 +208,7 @@ var WalletKitAuthProvider = ({
         }
       })();
     }
-  }, [initialized, ethersAccount.status, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
+  }, [initialized, accounts.bsc.status, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
   useEffect(() => {
     return () => {
       setInitialized(false);
@@ -228,8 +225,8 @@ var WalletKitAuthProvider = ({
     isLoggingOutProcessing,
     jwtToken,
     status,
-    address: ethersAccount.address
-  }), [signIn, signOut, isSigningInProcessing, isLoggingOutProcessing, jwtToken, status, ethersAccount.address]);
+    address: accounts.bsc.address
+  }), [signIn, signOut, isSigningInProcessing, isLoggingOutProcessing, jwtToken, status, accounts.bsc.address]);
   if (!initialized) {
     return null;
   }
