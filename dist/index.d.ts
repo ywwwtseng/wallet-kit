@@ -69,6 +69,8 @@ declare function useConnect(): {
     isPending: boolean;
 };
 
+type ContinueInWalletModalType = 'signTransaction' | 'sendTransaction' | 'writeContract' | undefined;
+
 interface Account {
     address: Address | string | undefined;
     status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | undefined;
@@ -87,7 +89,8 @@ interface WalletKitConnectContextState {
     accounts: Accounts;
     balance: Record<string, string>;
     currentChainId: number | undefined;
-    openContinueInWalletModal: (open: boolean) => void;
+    openContinueInWalletModal: (type: ContinueInWalletModalType) => void;
+    closeContinueInWalletModal: () => void;
     getBalance: (token: Token) => Promise<void>;
     getNetwork: (network: string) => AppKitNetwork | undefined;
     connect: (options?: {

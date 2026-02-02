@@ -64,14 +64,14 @@ export function useWriteContract({
   onSuccess?: (receipt: Awaited<ReturnType<typeof waitForTransactionReceipt>>) => void;
   onError?: (error: Error) => void;
 }) {
-  const { openContinueInWalletModal } = use(WalletKitConnectContext);
+  const { openContinueInWalletModal, closeContinueInWalletModal } = use(WalletKitConnectContext);
   const config = useConfig();
   const [isLoading, setIsLoading] = useState(false);
   
   return {
     isLoading,
     writeContract: async (params: any) => {
-      openContinueInWalletModal(true);
+      openContinueInWalletModal('writeContract');
       setIsLoading(true);
       try {
         const txHash = await writeContract(config, params as any);
@@ -83,7 +83,7 @@ export function useWriteContract({
         onError?.(error);
         throw error;
       } finally {
-        openContinueInWalletModal(false);
+        closeContinueInWalletModal();
         setIsLoading(false);
       }
     }

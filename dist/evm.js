@@ -1,6 +1,6 @@
 import {
   WalletKitConnectContext
-} from "./chunk-SIIUWGJ4.js";
+} from "./chunk-LSJIYOQT.js";
 import "./chunk-NXHCTNMM.js";
 import "./chunk-DMT75HZL.js";
 
@@ -54,13 +54,13 @@ function useWriteContract({
   onSuccess,
   onError
 }) {
-  const { openContinueInWalletModal } = use(WalletKitConnectContext);
+  const { openContinueInWalletModal, closeContinueInWalletModal } = use(WalletKitConnectContext);
   const config = useConfig();
   const [isLoading, setIsLoading] = useState(false);
   return {
     isLoading,
     writeContract: async (params) => {
-      openContinueInWalletModal(true);
+      openContinueInWalletModal("writeContract");
       setIsLoading(true);
       try {
         const txHash = await writeContract(config, params);
@@ -72,7 +72,7 @@ function useWriteContract({
         onError?.(error);
         throw error;
       } finally {
-        openContinueInWalletModal(false);
+        closeContinueInWalletModal();
         setIsLoading(false);
       }
     }

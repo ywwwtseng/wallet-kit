@@ -1,26 +1,31 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Modal, Typography } from '@ywwwtseng/react-kit';
 import type { ConnectedWalletInfo } from '@reown/appkit';
 
+export type ContinueInWalletModalType = 'signTransaction' | 'sendTransaction' | 'writeContract' | undefined;
+
 export function ContinueInWalletModal({
   theme = 'dark',
+  type,
   logo,
   open,
   onClose,
   getWalletInfo,
 }: {
   theme?: 'light' | 'dark';
+  type: ContinueInWalletModalType;
   logo: React.ReactNode;
   open: boolean;
   onClose: () => void;
   getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }) {
   const walletInfo = getWalletInfo?.();
-  const redirect = walletInfo?.redirect as { native?: string } | undefined;
-  const deepLink = redirect?.native;
+  const redirect = walletInfo?.redirect as { universal?: string; native?: string; } | undefined;
+  const link = redirect?.universal || walletInfo?.native;
 
-  if (walletInfo.type === 'INJECTED') {
+  if (walletInfo.type === 'INJECTED' || type === 'writeContract') {
     return null;
   }
 
@@ -123,7 +128,7 @@ export function ContinueInWalletModal({
             textDecoration: 'none',
             color: theme === 'dark' ? '#ffffff' : '#000000',
           }}
-          href={deepLink}
+          href={link as string}
           target="_blank"
           rel="noopener noreferrer"
         >

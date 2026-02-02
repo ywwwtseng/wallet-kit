@@ -24,7 +24,7 @@ import { WalletKitContext } from './WalletKitProvider';
 import * as web3 from '@ywwwtseng/web3';
 import { useSwitchChain, useConnection, useChainId, useConfig } from 'wagmi';
 import type { Address } from 'viem';
-import { ContinueInWalletModal } from './ContinueInWalletModal';
+import { ContinueInWalletModal, type ContinueInWalletModalType } from './ContinueInWalletModal';
 import { mainnet, sepolia, bsc, bscTestnet, solana, solanaDevnet } from './networks';
 import { useAccounts, type Accounts } from './hooks/useAccounts';
 import { useConnect } from './hooks/useConnect';
@@ -40,7 +40,8 @@ export interface WalletKitConnectContextState {
   accounts: Accounts;
   balance: Record<string, string>;
   currentChainId: number | undefined;
-  openContinueInWalletModal: (open: boolean) => void;
+  openContinueInWalletModal: (type: ContinueInWalletModalType) => void;
+  closeContinueInWalletModal: () => void;
   getBalance: (token: Token) => Promise<void>;
   getNetwork: (network: string) => AppKitNetwork | undefined;
   connect: (options?: { view?: Views }) => Promise<void>;
@@ -86,6 +87,9 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
   openContinueInWalletModal: () => {
     throw new Error('openContinueInWalletModal is not implemented');
   },
+  closeContinueInWalletModal: () => {
+    throw new Error('closeContinueInWalletModal is not implemented');
+  },
   getBalance: () => {
     throw new Error('getBalance is not implemented');
   },
@@ -126,7 +130,7 @@ export const WalletKitConnectProvider = ({
   const [connectError, setConnectError] = useState<Error | null>(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState<Record<string, string>>({});
-  const [continueInWalletModal, openContinueInWalletModal] = useState(false);
+  const [continueInWalletModal, setContinueInWalletModal] = useState<{ open: boolean, type: ContinueInWalletModalType }>({ open: false, type: undefined });
   const [isSendTxPending, setIsSendTxPending] = useState(false);
   const { disconnect: d } = useDisconnect();
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
@@ -146,11 +150,13 @@ export const WalletKitConnectProvider = ({
     
   }, [d]);
 
-  const delayOpenContinueInWalletModal = useCallback(() => {
-    setTimeout(() => {
-      openContinueInWalletModal(true);
-    }, 1500);
-  }, [openContinueInWalletModal]);
+  const openContinueInWalletModal = useCallback((type: ContinueInWalletModalType) => {
+    setContinueInWalletModal({ open: true, type });
+  }, [setContinueInWalletModal]);
+
+  const closeContinueInWalletModal = useCallback(() => {
+    setContinueInWalletModal({ open: false, type: undefined });
+  }, [setContinueInWalletModal]);
 
   const solanaProvider = useAppKitProvider<Provider>('solana');
 
@@ -290,7 +296,7 @@ export const WalletKitConnectProvider = ({
         if (!accounts.solana || !connection)
           throw Error('user is disconnected');
 
-        openContinueInWalletModal(true);
+        openContinueInWalletModal('signTransaction');
 
         const transaction = await createTransaction({
           feePayer,
@@ -308,10 +314,10 @@ export const WalletKitConnectProvider = ({
         console.error(error);
         throw error;
       } finally {
-        openContinueInWalletModal(false);
+        closeContinueInWalletModal();
       }
     },
-    [accounts.solana, solanaProvider, connection]
+    [accounts.solana, solanaProvider, connection, openContinueInWalletModal, closeContinueInWalletModal]
   );
 
   const sendTransaction = async ({
@@ -329,7 +335,7 @@ export const WalletKitConnectProvider = ({
   }) => {
     try {
       setIsSendTxPending(true);
-      openContinueInWalletModal(true);
+      openContinueInWalletModal('sendTransaction');
 
       // Solana 网络使用独立的逻辑
       if (token.network === 'solana') {
@@ -397,7 +403,7 @@ export const WalletKitConnectProvider = ({
       throw error;
     } finally {
       setIsSendTxPending(false);
-      openContinueInWalletModal(false);
+      closeContinueInWalletModal();
     }
   };
 
@@ -410,7 +416,8 @@ export const WalletKitConnectProvider = ({
       isSendTxPending,
       error: connectError,
       currentChainId,
-      openContinueInWalletModal: delayOpenContinueInWalletModal,
+      openContinueInWalletModal,
+      closeContinueInWalletModal,
       connect,
       getBalance,
       getNetwork,
@@ -427,7 +434,8 @@ export const WalletKitConnectProvider = ({
       isSendTxPending,
       currentChainId,
       connectError,
-      delayOpenContinueInWalletModal,
+      openContinueInWalletModal,
+      closeContinueInWalletModal,
       connect,
       getBalance,
       getNetwork,
@@ -441,15 +449,16 @@ export const WalletKitConnectProvider = ({
   return (
     <WalletKitConnectContext.Provider value={value}>
       {children}
-      {continueInWalletModal && (
+      {continueInWalletModal.open && (
         <ContinueInWalletModal
           open
+          type={continueInWalletModal.type}
           theme={theme}
           logo={logo}
           getWalletInfo={getWalletInfo}
           onClose={() => {
             setIsSendTxPending(false);
-            openContinueInWalletModal(false);
+            closeContinueInWalletModal();
           }}
         />
       )}
