@@ -467,6 +467,7 @@ export const WalletKitConnectProvider = ({
           logo={logo}
           getWalletInfo={getWalletInfo}
           onClose={() => {
+            console.log('[WalletKitConnectProvider] onClose');
             setIsSendTxPending(false);
             closeContinueInWalletModal();
           }}

@@ -48,7 +48,7 @@ function ContinueInWalletModal({
 }) {
   const walletInfo = getWalletInfo?.();
   const redirect = walletInfo?.redirect;
-  const link = redirect?.universal || walletInfo?.native;
+  const link = redirect?.native;
   if (walletInfo.type === "INJECTED" || type === "writeContract") {
     return null;
   }
@@ -646,6 +646,7 @@ var WalletKitConnectProvider = ({
         logo,
         getWalletInfo,
         onClose: () => {
+          console.log("[WalletKitConnectProvider] onClose");
           setIsSendTxPending(false);
           closeContinueInWalletModal();
         }
