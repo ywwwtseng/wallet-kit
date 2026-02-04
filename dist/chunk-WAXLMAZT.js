@@ -105,7 +105,6 @@ function storeJWT(appKey, token, address) {
   localStorage.setItem(`${appKey}_${JWT_ADDRESS_KEY}`, address);
 }
 function clearStoredJWT(appKey) {
-  console.trace("clearStoredJWT");
   if (typeof window === "undefined") {
     return;
   }

@@ -144,12 +144,12 @@ export const WalletKitConnectProvider = ({
   const currentChainId = useChainId();
 
   if (debug) {
-    console.log(accounts.bsc.address, accounts.bsc.status);
+    console.log('[WalletKitConnectProvider] accounts', accounts);
   }
 
   const disconnect = useCallback(async (clearLocalStorage?: boolean) => {
     if (debug) {
-      console.trace('disconnect');
+      console.trace('[WalletKitConnectProvider] disconnect');
     }
     await d();
 

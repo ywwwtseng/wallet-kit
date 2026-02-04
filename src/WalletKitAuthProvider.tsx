@@ -5,7 +5,7 @@ import { type Views, useDisconnect } from '@reown/appkit/react';
 import { signMessage } from 'wagmi/actions';
 import { useAccounts } from './hooks/useAccounts';
 import { useConnect } from './hooks/useConnect';
-import { useWagmiConfig, useWagmiAccount } from './wagmi';
+import { useWagmiConfig } from './wagmi';
 import { getStoredJWT, clearStoredJWT, storeJWT, getSignMessage, isJWTExpired, getJWTExpirationTime } from './utils';
 import { Status } from './constants';
 
@@ -46,7 +46,7 @@ export const WalletKitAuthProvider = ({
   children: React.ReactNode | ((state: WalletKitAuthContextState) => React.ReactNode);
 }) => {
   const expirationTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [jwtToken, setJwtToken] = useState<string | null>(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
@@ -124,8 +124,6 @@ export const WalletKitAuthProvider = ({
   useEffect(() => {
     if (isLoggingOutProcessing) return;
 
-    console.log('accounts.bsc', accounts.bsc);
-
     if (
       !accounts.bsc.status ||
       accounts.bsc.status === 'reconnecting' ||
@@ -134,11 +132,18 @@ export const WalletKitAuthProvider = ({
       return;
     }
 
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+
     // 只在正在连接且有地址时才跳过（避免断开连接过程中的 connecting 状态阻止初始化）
     if (!initialized && accounts.bsc.status === 'disconnected') {
-      signOut().then(() => {
-        setInitialized(true);
-      });
+      logoutTimerRef.current = setTimeout(() => {
+        signOut().then(() => {
+          setInitialized(true);
+        });
+      }, 1000);
       return;
     };
 
@@ -155,7 +160,7 @@ export const WalletKitAuthProvider = ({
         setupExpirationTimer(stored.token);
       }
     } else if (stored && stored.address !== accounts.bsc.address) {
-      console.log('钱包地址不匹配，清除 JWT token', stored.address, accounts.bsc.address);
+      console.log('Wallet address mismatch, clear JWT token.', stored.address, accounts.bsc.address);
       // 地址不匹配，清除旧的 token
       clearStoredJWT(appKey);
       setJwtToken(null);
@@ -169,7 +174,7 @@ export const WalletKitAuthProvider = ({
     if (isLoggingOutProcessing) return;
 
     if (!accounts.bsc.address && jwtToken) {
-      console.log('钱包断开连接，清除 JWT token', accounts.bsc.address, accounts.bsc.status);
+      console.log('Wallet disconnected, JWT token cleared.', accounts.bsc.address, accounts.bsc.status);
       // 清除定时器
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);

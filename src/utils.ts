@@ -136,7 +136,6 @@ export function storeJWT(appKey: string, token: string, address: string): void {
  * 清除存储的 JWT token
  */
 export function clearStoredJWT(appKey: string): void {
-  console.trace('clearStoredJWT');
   if (typeof window === 'undefined') {
     return;
   }

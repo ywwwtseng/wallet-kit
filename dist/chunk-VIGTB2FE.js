@@ -1,6 +1,6 @@
 import {
   clearLocalStorageByPrefix
-} from "./chunk-NXHCTNMM.js";
+} from "./chunk-WAXLMAZT.js";
 import {
   bsc,
   bscTestnet,
@@ -392,11 +392,11 @@ var WalletKitConnectProvider = ({
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
   if (debug) {
-    console.log(accounts.bsc.address, accounts.bsc.status);
+    console.log("[WalletKitConnectProvider] accounts", accounts);
   }
   const disconnect = useCallback2(async (clearLocalStorage) => {
     if (debug) {
-      console.trace("disconnect");
+      console.trace("[WalletKitConnectProvider] disconnect");
     }
     await d();
     if (clearLocalStorage) {

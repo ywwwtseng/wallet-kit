@@ -5,7 +5,7 @@ import {
   useAccounts,
   useConfig,
   useConnect
-} from "./chunk-RCI2KTFZ.js";
+} from "./chunk-VIGTB2FE.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -19,7 +19,7 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-NXHCTNMM.js";
+} from "./chunk-WAXLMAZT.js";
 import {
   bsc,
   bscTestnet,
@@ -54,7 +54,7 @@ var WalletKitAuthProvider = ({
   children
 }) => {
   const expirationTimerRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
+  const logoutTimerRef = useRef(null);
   const [jwtToken, setJwtToken] = useState(null);
   const { disconnect } = useDisconnect();
   const { open } = useConnect();
@@ -114,14 +114,19 @@ var WalletKitAuthProvider = ({
   }, [appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    console.log("accounts.bsc", accounts.bsc);
     if (!accounts.bsc.status || accounts.bsc.status === "reconnecting" || accounts.bsc.status === "connecting") {
       return;
     }
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
     if (!initialized && accounts.bsc.status === "disconnected") {
-      signOut().then(() => {
-        setInitialized(true);
-      });
+      logoutTimerRef.current = setTimeout(() => {
+        signOut().then(() => {
+          setInitialized(true);
+        });
+      }, 1e3);
       return;
     }
     ;
@@ -136,7 +141,7 @@ var WalletKitAuthProvider = ({
         setupExpirationTimer(stored.token);
       }
     } else if (stored && stored.address !== accounts.bsc.address) {
-      console.log("\u94B1\u5305\u5730\u5740\u4E0D\u5339\u914D\uFF0C\u6E05\u9664 JWT token", stored.address, accounts.bsc.address);
+      console.log("Wallet address mismatch, clear JWT token.", stored.address, accounts.bsc.address);
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
@@ -145,7 +150,7 @@ var WalletKitAuthProvider = ({
   useEffect(() => {
     if (isLoggingOutProcessing) return;
     if (!accounts.bsc.address && jwtToken) {
-      console.log("\u94B1\u5305\u65AD\u5F00\u8FDE\u63A5\uFF0C\u6E05\u9664 JWT token", accounts.bsc.address, accounts.bsc.status);
+      console.log("Wallet disconnected, JWT token cleared.", accounts.bsc.address, accounts.bsc.status);
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;
