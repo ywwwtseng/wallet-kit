@@ -72,14 +72,17 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
     bsc: {
       address: undefined,
       status: undefined,
+      isConnected: false,
     },
     ethereum: {
       address: undefined,
       status: undefined,
+      isConnected: false,
     },
     solana: {
       address: undefined,
       status: undefined,
+      isConnected: false,
     },
   },
   balance: {},
@@ -140,7 +143,14 @@ export const WalletKitConnectProvider = ({
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
 
+  if (debug) {
+    console.log(accounts.bsc.address, accounts.bsc.status);
+  }
+
   const disconnect = useCallback(async (clearLocalStorage?: boolean) => {
+    if (debug) {
+      console.trace('disconnect');
+    }
     await d();
 
     if (clearLocalStorage) {

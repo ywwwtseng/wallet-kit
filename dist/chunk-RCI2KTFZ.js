@@ -12,7 +12,7 @@ import {
 
 // src/WalletKitProvider.tsx
 import {
-  useMemo as useMemo4,
+  useMemo as useMemo3,
   createContext as createContext2
 } from "react";
 import { WagmiProvider, cookieToInitialState } from "wagmi";
@@ -21,8 +21,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // src/WalletKitConnectProvider.tsx
 import {
   use,
-  useState as useState4,
-  useMemo as useMemo3,
+  useState as useState3,
+  useMemo as useMemo2,
   useCallback as useCallback2,
   createContext
 } from "react";
@@ -186,149 +186,55 @@ function ContinueInWalletModal({
 }
 
 // src/hooks/useAccounts.ts
-import { useMemo as useMemo2 } from "react";
+import { useMemo } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
 
-// src/hooks/useFinalizedAppKitStatus.ts
-import { useEffect, useMemo, useRef, useState } from "react";
-function useFinalizedAppKitStatus(status, opts) {
-  const settleMs = opts?.settleMs ?? 600;
-  const [stable, setStable] = useState(void 0);
-  const countRef = useRef(null);
-  const timerRef = useRef(null);
-  const lastStatusRef = useRef(void 0);
+// src/hooks/useStabilizedAccount.ts
+import { useEffect, useRef, useState } from "react";
+function useStabilizedAccount(account) {
+  const statusRef = useRef(void 0);
+  const [stabilizedAccount, setStabilizedAccount] = useState({ address: account.address, isConnected: account.isConnected, status: void 0 });
   useEffect(() => {
-    if (!status) {
-      countRef.current = null;
-      lastStatusRef.current = void 0;
-      setStable(void 0);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-    const lastStatus = lastStatusRef.current;
-    const statusChanged = lastStatus !== status;
-    if (status !== "connected" && status !== "disconnected") {
-      if (countRef.current) {
-        countRef.current = null;
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
-      }
-      lastStatusRef.current = status;
-      return;
-    }
-    const stableStatus = status;
-    if (statusChanged) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (countRef.current && countRef.current.status !== stableStatus) {
-        countRef.current = null;
-      }
-      if (!countRef.current) {
-        countRef.current = {
-          status: stableStatus,
-          count: 1
-        };
-        const savedStatus = stableStatus;
-        timerRef.current = setTimeout(() => {
-          if (countRef.current && countRef.current.count === 1 && countRef.current.status === savedStatus) {
-            setStable(countRef.current.status);
-            countRef.current = null;
-            timerRef.current = null;
-          }
-        }, settleMs);
-      } else if (countRef.current.status === stableStatus) {
-        countRef.current.count += 1;
-        setStable(stableStatus);
-        countRef.current = null;
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
+    if (account.status === "connecting" || account.status === "reconnecting") {
+      if (!statusRef.current) {
+        statusRef.current = account.status;
       }
     } else {
-      if (countRef.current && countRef.current.status === stableStatus && !timerRef.current) {
-        const savedStatus = stableStatus;
-        timerRef.current = setTimeout(() => {
-          if (countRef.current && countRef.current.count === 1 && countRef.current.status === savedStatus) {
-            setStable(countRef.current.status);
-            countRef.current = null;
-            timerRef.current = null;
-          }
-        }, settleMs);
-      } else if (!countRef.current && !timerRef.current) {
-        countRef.current = {
-          status: stableStatus,
-          count: 1
-        };
-        const savedStatus = stableStatus;
-        timerRef.current = setTimeout(() => {
-          if (countRef.current && countRef.current.count === 1 && countRef.current.status === savedStatus) {
-            setStable(countRef.current.status);
-            countRef.current = null;
-            timerRef.current = null;
-          }
-        }, settleMs);
-      }
+      statusRef.current = account.status;
     }
-    lastStatusRef.current = status;
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [status, settleMs]);
-  return useMemo(() => {
-    if (stable) {
-      return stable;
-    }
-    if (typeof window === "undefined") {
-      return void 0;
-    }
-    const connection_status = localStorage.getItem("@appkit/connection_status");
-    if (connection_status) {
-      return connection_status === "disconnected" ? "reconnecting" : "connecting";
-    }
-    return void 0;
-  }, [stable]);
+    setStabilizedAccount({
+      address: account.address,
+      status: statusRef.current,
+      isConnected: account.isConnected
+    });
+  }, [account.address, account.status, account.isConnected]);
+  return stabilizedAccount;
 }
 
 // src/hooks/useAccounts.ts
 function useAccounts() {
   const solanaAccount = useAppKitAccount({ namespace: "solana" });
   const ethersAccount = useAppKitAccount({ namespace: "eip155" });
-  const finalizedStatus = useFinalizedAppKitStatus(ethersAccount.status);
-  return useMemo2(() => {
+  const stabilizedAccount = useStabilizedAccount(ethersAccount);
+  return useMemo(() => {
     return {
-      bsc: {
-        address: ethersAccount.address,
-        status: finalizedStatus
-      },
-      ethereum: {
-        address: ethersAccount.address,
-        status: finalizedStatus
-      },
+      bsc: stabilizedAccount,
+      ethereum: stabilizedAccount,
       solana: {
         address: solanaAccount.address,
-        status: solanaAccount.status
+        status: solanaAccount.status,
+        isConnected: solanaAccount.isConnected
       }
     };
-  }, [solanaAccount, ethersAccount, finalizedStatus]);
+  }, [solanaAccount, ethersAccount, stabilizedAccount]);
 }
 
 // src/hooks/useConnect.ts
-import { useCallback, useState as useState3 } from "react";
+import { useCallback, useState as useState2 } from "react";
 import { useAppKit } from "@reown/appkit/react";
 function useConnect() {
   const appKit = useAppKit();
-  const [isPending, setIsPending] = useState3(false);
+  const [isPending, setIsPending] = useState2(false);
   const open = useCallback(async (view) => {
     setIsPending(true);
     await appKit.open({
@@ -421,15 +327,18 @@ var WalletKitConnectContext = createContext({
   accounts: {
     bsc: {
       address: void 0,
-      status: void 0
+      status: void 0,
+      isConnected: false
     },
     ethereum: {
       address: void 0,
-      status: void 0
+      status: void 0,
+      isConnected: false
     },
     solana: {
       address: void 0,
-      status: void 0
+      status: void 0,
+      isConnected: false
     }
   },
   balance: {},
@@ -470,11 +379,11 @@ var WalletKitConnectProvider = ({
   children
 }) => {
   const config = useConfig2();
-  const [connectError, setConnectError] = useState4(null);
+  const [connectError, setConnectError] = useState3(null);
   const { getWalletInfo } = use(WalletKitContext);
-  const [balance, setBalance] = useState4({});
-  const [continueInWalletModal, setContinueInWalletModal] = useState4({ open: false, type: void 0 });
-  const [isSendTxPending, setIsSendTxPending] = useState4(false);
+  const [balance, setBalance] = useState3({});
+  const [continueInWalletModal, setContinueInWalletModal] = useState3({ open: false, type: void 0 });
+  const [isSendTxPending, setIsSendTxPending] = useState3(false);
   const { disconnect: d } = useDisconnect();
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
@@ -482,7 +391,13 @@ var WalletKitConnectProvider = ({
   const switchChain = useSwitchChain();
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
+  if (debug) {
+    console.log(accounts.bsc.address, accounts.bsc.status);
+  }
   const disconnect = useCallback2(async (clearLocalStorage) => {
+    if (debug) {
+      console.trace("disconnect");
+    }
     await d();
     if (clearLocalStorage) {
       clearLocalStorageByPrefix("@appkit/");
@@ -682,7 +597,7 @@ var WalletKitConnectProvider = ({
       closeContinueInWalletModal();
     }
   };
-  const value = useMemo3(
+  const value = useMemo2(
     () => ({
       isMainnet,
       accounts,
@@ -756,7 +671,7 @@ var WalletKitProvider = ({
   getWalletInfo
 }) => {
   const initialState = cookieToInitialState(config, cookies);
-  const value = useMemo4(
+  const value = useMemo3(
     () => ({
       getWalletInfo
     }),

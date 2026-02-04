@@ -124,9 +124,13 @@ export const WalletKitAuthProvider = ({
   useEffect(() => {
     if (isLoggingOutProcessing) return;
 
-    console.log('accounts.bsc.status', accounts.bsc.status, accounts.bsc.address);
+    console.log('accounts.bsc', accounts.bsc);
 
-    if (accounts.bsc.status === 'reconnecting' || accounts.bsc.status === 'connecting') {
+    if (
+      !accounts.bsc.status ||
+      accounts.bsc.status === 'reconnecting' ||
+      accounts.bsc.status === 'connecting'
+    ) {
       return;
     }
 
@@ -158,7 +162,7 @@ export const WalletKitAuthProvider = ({
     }
 
     setInitialized(true);
-  }, [initialized, accounts.bsc.status, accounts.bsc.address, isLoggingOutProcessing, setupExpirationTimer, appKey]);
+  }, [initialized, accounts.bsc, isLoggingOutProcessing, setupExpirationTimer, appKey]);
 
   // 当钱包断开连接时，清除 JWT token
   useEffect(() => {
@@ -250,7 +254,7 @@ export const WalletKitAuthProvider = ({
       })();
 
     }
-  }, [initialized, accounts.bsc.status, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
+  }, [initialized, accounts.bsc, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
 
   // 组件卸载时清理定时器
   useEffect(() => {

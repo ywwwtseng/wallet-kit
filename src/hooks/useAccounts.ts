@@ -1,11 +1,12 @@
-import { useMemo, useState, useEffect } from 'react';
-import { useAppKitAccount, type AccountState } from '@reown/appkit/react';
+import { useMemo } from 'react';
+import { useAppKitAccount } from '@reown/appkit/react';
 import type { Address } from 'viem';
-import { useFinalizedAppKitStatus } from './useFinalizedAppKitStatus';
+import { useStabilizedAccount } from './useStabilizedAccount';
 
 export interface Account {
   address: Address | string | undefined;
   status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | undefined;
+  isConnected: boolean;
 }
 
 export interface Accounts {
@@ -20,22 +21,17 @@ export interface Accounts {
 export function useAccounts() {
   const solanaAccount = useAppKitAccount({ namespace: 'solana' });
   const ethersAccount = useAppKitAccount({ namespace: 'eip155' });
-  const finalizedStatus = useFinalizedAppKitStatus(ethersAccount.status);
+  const stabilizedAccount = useStabilizedAccount(ethersAccount);
 
   return useMemo(() => {
     return {
-      bsc: {
-        address: ethersAccount.address as Address,
-        status: finalizedStatus,
-      },
-      ethereum: {
-        address: ethersAccount.address as Address,
-        status: finalizedStatus,
-      },
+      bsc: stabilizedAccount,
+      ethereum: stabilizedAccount,
       solana: {
         address: solanaAccount.address as string,
         status: solanaAccount.status,
+        isConnected: solanaAccount.isConnected,
       },
     };
-  }, [solanaAccount, ethersAccount, finalizedStatus]);
+  }, [solanaAccount, ethersAccount, stabilizedAccount]);
 }

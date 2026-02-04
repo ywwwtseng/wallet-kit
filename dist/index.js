@@ -5,7 +5,7 @@ import {
   useAccounts,
   useConfig,
   useConnect
-} from "./chunk-LSJIYOQT.js";
+} from "./chunk-RCI2KTFZ.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -114,8 +114,8 @@ var WalletKitAuthProvider = ({
   }, [appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
-    console.log("accounts.bsc.status", accounts.bsc.status, accounts.bsc.address);
-    if (accounts.bsc.status === "reconnecting" || accounts.bsc.status === "connecting") {
+    console.log("accounts.bsc", accounts.bsc);
+    if (!accounts.bsc.status || accounts.bsc.status === "reconnecting" || accounts.bsc.status === "connecting") {
       return;
     }
     if (!initialized && accounts.bsc.status === "disconnected") {
@@ -141,7 +141,7 @@ var WalletKitAuthProvider = ({
       setJwtToken(null);
     }
     setInitialized(true);
-  }, [initialized, accounts.bsc.status, accounts.bsc.address, isLoggingOutProcessing, setupExpirationTimer, appKey]);
+  }, [initialized, accounts.bsc, isLoggingOutProcessing, setupExpirationTimer, appKey]);
   useEffect(() => {
     if (isLoggingOutProcessing) return;
     if (!accounts.bsc.address && jwtToken) {
@@ -208,7 +208,7 @@ var WalletKitAuthProvider = ({
         }
       })();
     }
-  }, [initialized, accounts.bsc.status, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
+  }, [initialized, accounts.bsc, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
   useEffect(() => {
     return () => {
       setInitialized(false);

@@ -74,6 +74,7 @@ type ContinueInWalletModalType = 'signTransaction' | 'sendTransaction' | 'writeC
 interface Account {
     address: Address | string | undefined;
     status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | undefined;
+    isConnected: boolean;
 }
 interface Accounts {
     bsc: Account;
