@@ -5,9 +5,11 @@
 
 import {
   use,
+  useRef,
   useState,
   useMemo,
   useCallback,
+  useEffect,
   createContext,
 } from 'react';
 import {
@@ -40,11 +42,17 @@ export interface WalletKitConnectContextState {
   accounts: Accounts;
   balance: Record<string, string>;
   currentChainId: number | undefined;
+  connectedCallbacks: {
+    bsc: Function[];
+    ethereum: Function[];
+    solana: Function[];
+  };
+  executeConnectedCallbacks: (network: string) => Promise<void>;
   openContinueInWalletModal: (type: ContinueInWalletModalType) => void;
   closeContinueInWalletModal: () => void;
   getBalance: (token: Token) => Promise<void>;
   getNetwork: (network: string) => AppKitNetwork | undefined;
-  connect: (options?: { view?: Views }) => Promise<void>;
+  open: (options?: { view?: Views }) => Promise<void>;
   disconnect: (clearLocalStorage?: boolean) => Promise<void>;
   signTransaction: (params: {
     feePayer: string;
@@ -87,6 +95,14 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
   },
   balance: {},
   currentChainId: undefined,
+  connectedCallbacks: {
+    bsc: [],
+    ethereum: [],
+    solana: [],
+  },
+  executeConnectedCallbacks: () => {
+    throw new Error('executeConnectedCallbacks is not implemented');
+  },
   openContinueInWalletModal: () => {
     throw new Error('openContinueInWalletModal is not implemented');
   },
@@ -99,8 +115,8 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
   getNetwork: () => {
     throw new Error('getNetwork is not implemented');
   },
-  connect: () => {
-    throw new Error('connect is not implemented');
+  open: () => {
+    throw new Error('open is not implemented');
   },
   disconnect: () => {
     throw new Error('disconnect is not implemented');
@@ -120,28 +136,72 @@ export const WalletKitConnectProvider = ({
   theme = 'dark',
   debug = false,
   isMainnet = true,
+  maunalExecuteConnectedCallbacks = false,
   logo,
   children,
 }: {
   theme?: 'light' | 'dark';
   debug?: boolean;
   isMainnet?: boolean;
+  maunalExecuteConnectedCallbacks?: boolean;
   logo: React.ReactNode;
   children: React.ReactNode;
 }) => {
+  const connectedCallbacksRef = useRef({
+    bsc: [],
+    ethereum: [],
+    solana: [],
+  });
   const config = useConfig();
   const [connectError, setConnectError] = useState<Error | null>(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState<Record<string, string>>({});
   const [continueInWalletModal, setContinueInWalletModal] = useState<{ open: boolean, type: ContinueInWalletModalType }>({ open: false, type: undefined });
   const [isSendTxPending, setIsSendTxPending] = useState(false);
-  const { disconnect: d } = useDisconnect();
+  const { disconnect: _disconnect } = useDisconnect();
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
   const accounts = useAccounts();
   const switchChain = useSwitchChain();
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
+
+  const executeConnectedCallbacks = useCallback(async (network: string) => {
+    if (network === 'bsc') {
+      for (const callback of connectedCallbacksRef.current.bsc) {
+        await callback();
+      }
+      connectedCallbacksRef.current.bsc = [];
+    } else if (network === 'ethereum') {
+      for (const callback of connectedCallbacksRef.current.ethereum) {
+        await callback();
+      }
+      connectedCallbacksRef.current.ethereum = [];
+    } else if (network === 'solana') {
+      for (const callback of connectedCallbacksRef.current.solana) {
+        await callback();
+      }
+      connectedCallbacksRef.current.solana = [];
+    }
+  }, [maunalExecuteConnectedCallbacks]);
+
+  useEffect(() => {
+    if (accounts.bsc.isConnected && !maunalExecuteConnectedCallbacks) {
+      void executeConnectedCallbacks('bsc');
+    }
+  }, [accounts.bsc.isConnected, maunalExecuteConnectedCallbacks]);
+
+  useEffect(() => {
+    if (accounts.ethereum.isConnected && !maunalExecuteConnectedCallbacks) {
+      void executeConnectedCallbacks('ethereum');
+    }
+  }, [accounts.ethereum.isConnected, maunalExecuteConnectedCallbacks]);
+
+  useEffect(() => {
+    if (accounts.solana.isConnected && !maunalExecuteConnectedCallbacks) {
+      void executeConnectedCallbacks('solana');
+    }
+  }, [accounts.solana.isConnected, maunalExecuteConnectedCallbacks]);
 
   if (debug) {
     console.log('[WalletKitConnectProvider] accounts', accounts);
@@ -151,14 +211,14 @@ export const WalletKitConnectProvider = ({
     if (debug) {
       console.trace('[WalletKitConnectProvider] disconnect');
     }
-    await d();
+    await _disconnect();
 
     if (clearLocalStorage) {
       clearLocalStorageByPrefix('@appkit/');
       clearLocalStorageByPrefix('wagmi.');
     }
     
-  }, [d]);
+  }, [_disconnect]);
 
   const openContinueInWalletModal = useCallback((type: ContinueInWalletModalType) => {
     setContinueInWalletModal({ open: true, type });
@@ -170,15 +230,15 @@ export const WalletKitConnectProvider = ({
 
   const solanaProvider = useAppKitProvider<Provider>('solana');
 
-  const { open, isPending: isConnectPending } = useConnect();
+  const { open: _open, isPending: isConnectPending } = useConnect();
 
-  const connect = useCallback(async (options?: { view?: Views }) => {
+  const open = useCallback(async (options?: { view?: Views }) => {
     try {
-      await open(options?.view);
+      await _open(options?.view);
     } catch (error) {
       setConnectError(error instanceof Error ? error : new Error(String(error)));
     }
-  }, [open]);
+  }, [_open]);
 
   const getNetwork = useCallback((network: string) => {
     if (network === 'bsc') {
@@ -426,12 +486,14 @@ export const WalletKitConnectProvider = ({
       isSendTxPending,
       error: connectError,
       currentChainId,
+      connectedCallbacks: connectedCallbacksRef.current,
+      executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
-      connect,
+      open,
+      disconnect,
       getBalance,
       getNetwork,
-      disconnect,
       signTransaction,
       sendTransaction,
       switchNetwork,
@@ -444,9 +506,10 @@ export const WalletKitConnectProvider = ({
       isSendTxPending,
       currentChainId,
       connectError,
+      executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
-      connect,
+      open,
       getBalance,
       getNetwork,
       disconnect,

@@ -35,6 +35,7 @@ export const WalletKitContext = createContext<WalletKitContextType>({
 export const WalletKitProvider = ({
   theme = 'dark',
   debug = false,
+  maunalExecuteConnectedCallbacks = false,
   isMainnet = true,
   config,
   cookies,
@@ -44,6 +45,7 @@ export const WalletKitProvider = ({
 }: {
   theme?: 'light' | 'dark';
   debug?: boolean;
+  maunalExecuteConnectedCallbacks?: boolean;
   isMainnet?: boolean;
   config: Config;
   cookies?: string | null;
@@ -66,7 +68,13 @@ export const WalletKitProvider = ({
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config} initialState={initialState}>
         <WalletKitContext.Provider value={value}>
-          <WalletKitConnectProvider debug={debug} isMainnet={isMainnet} logo={logo} theme={theme}>
+          <WalletKitConnectProvider
+            debug={debug}
+            isMainnet={isMainnet}
+            logo={logo}
+            theme={theme}
+            maunalExecuteConnectedCallbacks={maunalExecuteConnectedCallbacks}
+          >
             {children}
           </WalletKitConnectProvider>
         </WalletKitContext.Provider>

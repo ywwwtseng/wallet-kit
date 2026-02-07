@@ -53,9 +53,10 @@ interface WalletKitContextType {
     getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }
 declare const WalletKitContext: react.Context<WalletKitContextType>;
-declare const WalletKitProvider: ({ theme, debug, isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+declare const WalletKitProvider: ({ theme, debug, maunalExecuteConnectedCallbacks, isMainnet, config, cookies, logo, children, getWalletInfo, }: {
     theme?: "light" | "dark";
     debug?: boolean;
+    maunalExecuteConnectedCallbacks?: boolean;
     isMainnet?: boolean;
     config: Config;
     cookies?: string | null;
@@ -90,11 +91,17 @@ interface WalletKitConnectContextState {
     accounts: Accounts;
     balance: Record<string, string>;
     currentChainId: number | undefined;
+    connectedCallbacks: {
+        bsc: Function[];
+        ethereum: Function[];
+        solana: Function[];
+    };
+    executeConnectedCallbacks: (network: string) => Promise<void>;
     openContinueInWalletModal: (type: ContinueInWalletModalType) => void;
     closeContinueInWalletModal: () => void;
     getBalance: (token: Token) => Promise<void>;
     getNetwork: (network: string) => AppKitNetwork | undefined;
-    connect: (options?: {
+    open: (options?: {
         view?: Views;
     }) => Promise<void>;
     disconnect: (clearLocalStorage?: boolean) => Promise<void>;

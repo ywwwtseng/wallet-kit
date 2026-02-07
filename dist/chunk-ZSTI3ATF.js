@@ -21,9 +21,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // src/WalletKitConnectProvider.tsx
 import {
   use,
+  useRef as useRef2,
   useState as useState3,
   useMemo as useMemo2,
   useCallback as useCallback2,
+  useEffect as useEffect2,
   createContext
 } from "react";
 import {
@@ -343,6 +345,14 @@ var WalletKitConnectContext = createContext({
   },
   balance: {},
   currentChainId: void 0,
+  connectedCallbacks: {
+    bsc: [],
+    ethereum: [],
+    solana: []
+  },
+  executeConnectedCallbacks: () => {
+    throw new Error("executeConnectedCallbacks is not implemented");
+  },
   openContinueInWalletModal: () => {
     throw new Error("openContinueInWalletModal is not implemented");
   },
@@ -355,8 +365,8 @@ var WalletKitConnectContext = createContext({
   getNetwork: () => {
     throw new Error("getNetwork is not implemented");
   },
-  connect: () => {
-    throw new Error("connect is not implemented");
+  open: () => {
+    throw new Error("open is not implemented");
   },
   disconnect: () => {
     throw new Error("disconnect is not implemented");
@@ -375,22 +385,61 @@ var WalletKitConnectProvider = ({
   theme = "dark",
   debug = false,
   isMainnet = true,
+  maunalExecuteConnectedCallbacks = false,
   logo,
   children
 }) => {
+  const connectedCallbacksRef = useRef2({
+    bsc: [],
+    ethereum: [],
+    solana: []
+  });
   const config = useConfig2();
   const [connectError, setConnectError] = useState3(null);
   const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState3({});
   const [continueInWalletModal, setContinueInWalletModal] = useState3({ open: false, type: void 0 });
   const [isSendTxPending, setIsSendTxPending] = useState3(false);
-  const { disconnect: d } = useDisconnect();
+  const { disconnect: _disconnect } = useDisconnect();
   const { switchNetwork: switchAppKitNetwork } = useAppKitNetwork();
   const { connection } = useAppKitConnection();
   const accounts = useAccounts();
   const switchChain = useSwitchChain();
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
+  const executeConnectedCallbacks = useCallback2(async (network) => {
+    if (network === "bsc") {
+      for (const callback of connectedCallbacksRef.current.bsc) {
+        await callback();
+      }
+      connectedCallbacksRef.current.bsc = [];
+    } else if (network === "ethereum") {
+      for (const callback of connectedCallbacksRef.current.ethereum) {
+        await callback();
+      }
+      connectedCallbacksRef.current.ethereum = [];
+    } else if (network === "solana") {
+      for (const callback of connectedCallbacksRef.current.solana) {
+        await callback();
+      }
+      connectedCallbacksRef.current.solana = [];
+    }
+  }, [maunalExecuteConnectedCallbacks]);
+  useEffect2(() => {
+    if (accounts.bsc.isConnected && !maunalExecuteConnectedCallbacks) {
+      void executeConnectedCallbacks("bsc");
+    }
+  }, [accounts.bsc.isConnected, maunalExecuteConnectedCallbacks]);
+  useEffect2(() => {
+    if (accounts.ethereum.isConnected && !maunalExecuteConnectedCallbacks) {
+      void executeConnectedCallbacks("ethereum");
+    }
+  }, [accounts.ethereum.isConnected, maunalExecuteConnectedCallbacks]);
+  useEffect2(() => {
+    if (accounts.solana.isConnected && !maunalExecuteConnectedCallbacks) {
+      void executeConnectedCallbacks("solana");
+    }
+  }, [accounts.solana.isConnected, maunalExecuteConnectedCallbacks]);
   if (debug) {
     console.log("[WalletKitConnectProvider] accounts", accounts);
   }
@@ -398,12 +447,12 @@ var WalletKitConnectProvider = ({
     if (debug) {
       console.trace("[WalletKitConnectProvider] disconnect");
     }
-    await d();
+    await _disconnect();
     if (clearLocalStorage) {
       clearLocalStorageByPrefix("@appkit/");
       clearLocalStorageByPrefix("wagmi.");
     }
-  }, [d]);
+  }, [_disconnect]);
   const openContinueInWalletModal = useCallback2((type) => {
     setContinueInWalletModal({ open: true, type });
   }, [setContinueInWalletModal]);
@@ -411,14 +460,14 @@ var WalletKitConnectProvider = ({
     setContinueInWalletModal({ open: false, type: void 0 });
   }, [setContinueInWalletModal]);
   const solanaProvider = useAppKitProvider("solana");
-  const { open, isPending: isConnectPending } = useConnect();
-  const connect = useCallback2(async (options) => {
+  const { open: _open, isPending: isConnectPending } = useConnect();
+  const open = useCallback2(async (options) => {
     try {
-      await open(options?.view);
+      await _open(options?.view);
     } catch (error) {
       setConnectError(error instanceof Error ? error : new Error(String(error)));
     }
-  }, [open]);
+  }, [_open]);
   const getNetwork = useCallback2((network) => {
     if (network === "bsc") {
       return isMainnet ? bsc : bscTestnet;
@@ -606,12 +655,14 @@ var WalletKitConnectProvider = ({
       isSendTxPending,
       error: connectError,
       currentChainId,
+      connectedCallbacks: connectedCallbacksRef.current,
+      executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
-      connect,
+      open,
+      disconnect,
       getBalance: getBalance3,
       getNetwork,
-      disconnect,
       signTransaction,
       sendTransaction: sendTransaction2,
       switchNetwork
@@ -624,9 +675,10 @@ var WalletKitConnectProvider = ({
       isSendTxPending,
       currentChainId,
       connectError,
+      executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
-      connect,
+      open,
       getBalance3,
       getNetwork,
       disconnect,
@@ -664,6 +716,7 @@ var WalletKitContext = createContext2({
 var WalletKitProvider = ({
   theme = "dark",
   debug = false,
+  maunalExecuteConnectedCallbacks = false,
   isMainnet = true,
   config,
   cookies,
@@ -680,7 +733,17 @@ var WalletKitProvider = ({
       getWalletInfo
     ]
   );
-  return /* @__PURE__ */ jsx3(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx3(WagmiProvider, { config, initialState, children: /* @__PURE__ */ jsx3(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx3(WalletKitConnectProvider, { debug, isMainnet, logo, theme, children }) }) }) });
+  return /* @__PURE__ */ jsx3(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx3(WagmiProvider, { config, initialState, children: /* @__PURE__ */ jsx3(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx3(
+    WalletKitConnectProvider,
+    {
+      debug,
+      isMainnet,
+      logo,
+      theme,
+      maunalExecuteConnectedCallbacks,
+      children
+    }
+  ) }) }) });
 };
 
 export {
