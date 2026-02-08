@@ -3,81 +3,47 @@
 // https://solana.com/docs/tokens/basics/transfer-tokens
 'use client';
 
-import {
-  useMemo,
-  createContext,
-} from 'react';
-import { WagmiProvider, cookieToInitialState, type Config } from 'wagmi';
+import { WagmiProvider, cookieToInitialState } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import type { ConnectedWalletInfo } from '@reown/appkit';
 import { WalletKitConnectProvider } from './WalletKitConnectProvider';
-import type { AppKitNetwork } from './types';
-
-// AppKit 配置类型（允许部分覆盖）
-export type AppKitConfig = {
-  networks?: [AppKitNetwork, ...AppKitNetwork[]];
-  includeWalletIds?: string[];
-  // 可以添加其他可配置的选项
-};
-
-interface WalletKitContextType {
-  getWalletInfo?: () => ConnectedWalletInfo | undefined;
-}
+import { initAppKit } from './utils';
 
 const queryClient = new QueryClient();
-
-
-export const WalletKitContext = createContext<WalletKitContextType>({
-  getWalletInfo: () => undefined,
-});
 
 export const WalletKitProvider = ({
   theme = 'dark',
   debug = false,
   maunalExecuteConnectedCallbacks = false,
   isMainnet = true,
-  config,
   cookies,
   logo,
+  appKit,
   children,
-  getWalletInfo,
 }: {
   theme?: 'light' | 'dark';
   debug?: boolean;
   maunalExecuteConnectedCallbacks?: boolean;
   isMainnet?: boolean;
-  config: Config;
   cookies?: string | null;
   logo: React.ReactNode;
+  appKit: ReturnType<typeof initAppKit>;
   children: React.ReactNode;
-  getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }) => {
-  const initialState = cookieToInitialState(config, cookies);
-
-  const value = useMemo(
-    () => ({
-      getWalletInfo,
-    }),
-    [
-      getWalletInfo,
-    ]
-  );
+  const initialState = cookieToInitialState(appKit.config, cookies);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config} initialState={initialState}>
-        <WalletKitContext.Provider value={value}>
-          <WalletKitConnectProvider
-            debug={debug}
-            isMainnet={isMainnet}
-            logo={logo}
-            theme={theme}
-            maunalExecuteConnectedCallbacks={maunalExecuteConnectedCallbacks}
-          >
-            {children}
-          </WalletKitConnectProvider>
-        </WalletKitContext.Provider>
+      <WagmiProvider config={appKit.config} initialState={initialState}>
+        <WalletKitConnectProvider
+          debug={debug}
+          isMainnet={isMainnet}
+          logo={logo}
+          theme={theme}
+          maunalExecuteConnectedCallbacks={maunalExecuteConnectedCallbacks}
+          getWalletInfo={appKit.getWalletInfo}
+        >
+          {children}
+        </WalletKitConnectProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );

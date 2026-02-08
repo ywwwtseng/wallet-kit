@@ -16,13 +16,13 @@ import {
   useAppKitProvider,
   useDisconnect,
   useAppKitNetwork,
+  type Views
 } from '@reown/appkit/react';
+import type { ConnectedWalletInfo } from '@reown/appkit';
 import type { AppKitNetwork } from '@reown/appkit/networks';
 import { type Provider } from '@reown/appkit-adapter-solana';
 import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
-import type { Views } from '@reown/appkit/react';
 import { waitForTransactionReceipt } from 'wagmi/actions';
-import { WalletKitContext } from './WalletKitProvider';
 import * as web3 from '@ywwwtseng/web3';
 import { useSwitchChain, useConnection, useChainId, useConfig } from 'wagmi';
 import type { Address } from 'viem';
@@ -139,6 +139,7 @@ export const WalletKitConnectProvider = ({
   maunalExecuteConnectedCallbacks = false,
   logo,
   children,
+  getWalletInfo,
 }: {
   theme?: 'light' | 'dark';
   debug?: boolean;
@@ -146,6 +147,7 @@ export const WalletKitConnectProvider = ({
   maunalExecuteConnectedCallbacks?: boolean;
   logo: React.ReactNode;
   children: React.ReactNode;
+  getWalletInfo: () => ConnectedWalletInfo;
 }) => {
   const connectedCallbacksRef = useRef({
     bsc: [],
@@ -154,7 +156,6 @@ export const WalletKitConnectProvider = ({
   });
   const config = useConfig();
   const [connectError, setConnectError] = useState<Error | null>(null);
-  const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState<Record<string, string>>({});
   const [continueInWalletModal, setContinueInWalletModal] = useState<{ open: boolean, type: ContinueInWalletModalType }>({ open: false, type: undefined });
   const [isSendTxPending, setIsSendTxPending] = useState(false);

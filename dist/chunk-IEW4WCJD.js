@@ -10,17 +10,27 @@ import {
   solanaDevnet
 } from "./chunk-DMT75HZL.js";
 
-// src/WalletKitProvider.tsx
-import {
-  useMemo as useMemo3,
-  createContext as createContext2
-} from "react";
-import { WagmiProvider, cookieToInitialState } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// src/hooks/useConnect.ts
+import { useCallback, useState } from "react";
+import { useAppKit } from "@reown/appkit/react";
+function useConnect() {
+  const appKit = useAppKit();
+  const [isPending, setIsPending] = useState(false);
+  const open = useCallback(async (view) => {
+    setIsPending(true);
+    await appKit.open({
+      view: view ?? "AllWallets"
+    });
+    setIsPending(false);
+  }, []);
+  return {
+    open,
+    isPending
+  };
+}
 
 // src/WalletKitConnectProvider.tsx
 import {
-  use,
   useRef as useRef2,
   useState as useState3,
   useMemo as useMemo2,
@@ -192,10 +202,10 @@ import { useMemo } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
 
 // src/hooks/useStabilizedAccount.ts
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState as useState2 } from "react";
 function useStabilizedAccount(account) {
   const statusRef = useRef(void 0);
-  const [stabilizedAccount, setStabilizedAccount] = useState({ address: account.address, isConnected: account.isConnected, status: void 0 });
+  const [stabilizedAccount, setStabilizedAccount] = useState2({ address: account.address, isConnected: account.isConnected, status: void 0 });
   useEffect(() => {
     if (account.status === "connecting" || account.status === "reconnecting") {
       if (!statusRef.current) {
@@ -229,25 +239,6 @@ function useAccounts() {
       }
     };
   }, [solanaAccount, ethersAccount, stabilizedAccount]);
-}
-
-// src/hooks/useConnect.ts
-import { useCallback, useState as useState2 } from "react";
-import { useAppKit } from "@reown/appkit/react";
-function useConnect() {
-  const appKit = useAppKit();
-  const [isPending, setIsPending] = useState2(false);
-  const open = useCallback(async (view) => {
-    setIsPending(true);
-    await appKit.open({
-      view: view ?? "AllWallets"
-    });
-    setIsPending(false);
-  }, []);
-  return {
-    open,
-    isPending
-  };
 }
 
 // src/wagmi.ts
@@ -387,7 +378,8 @@ var WalletKitConnectProvider = ({
   isMainnet = true,
   maunalExecuteConnectedCallbacks = false,
   logo,
-  children
+  children,
+  getWalletInfo
 }) => {
   const connectedCallbacksRef = useRef2({
     bsc: [],
@@ -396,7 +388,6 @@ var WalletKitConnectProvider = ({
   });
   const config = useConfig2();
   const [connectError, setConnectError] = useState3(null);
-  const { getWalletInfo } = use(WalletKitContext);
   const [balance, setBalance] = useState3({});
   const [continueInWalletModal, setContinueInWalletModal] = useState3({ open: false, type: void 0 });
   const [isSendTxPending, setIsSendTxPending] = useState3(false);
@@ -707,50 +698,10 @@ var WalletKitConnectProvider = ({
   ] });
 };
 
-// src/WalletKitProvider.tsx
-import { jsx as jsx3 } from "react/jsx-runtime";
-var queryClient = new QueryClient();
-var WalletKitContext = createContext2({
-  getWalletInfo: () => void 0
-});
-var WalletKitProvider = ({
-  theme = "dark",
-  debug = false,
-  maunalExecuteConnectedCallbacks = false,
-  isMainnet = true,
-  config,
-  cookies,
-  logo,
-  children,
-  getWalletInfo
-}) => {
-  const initialState = cookieToInitialState(config, cookies);
-  const value = useMemo3(
-    () => ({
-      getWalletInfo
-    }),
-    [
-      getWalletInfo
-    ]
-  );
-  return /* @__PURE__ */ jsx3(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx3(WagmiProvider, { config, initialState, children: /* @__PURE__ */ jsx3(WalletKitContext.Provider, { value, children: /* @__PURE__ */ jsx3(
-    WalletKitConnectProvider,
-    {
-      debug,
-      isMainnet,
-      logo,
-      theme,
-      maunalExecuteConnectedCallbacks,
-      children
-    }
-  ) }) }) });
-};
-
 export {
-  WalletKitContext,
-  WalletKitProvider,
   useAccounts,
   useConnect,
   useConfig,
-  WalletKitConnectContext
+  WalletKitConnectContext,
+  WalletKitConnectProvider
 };

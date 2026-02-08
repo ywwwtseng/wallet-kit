@@ -1,11 +1,10 @@
 import {
   WalletKitConnectContext,
-  WalletKitContext,
-  WalletKitProvider,
+  WalletKitConnectProvider,
   useAccounts,
   useConfig,
   useConnect
-} from "./chunk-ZSTI3ATF.js";
+} from "./chunk-IEW4WCJD.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -238,6 +237,36 @@ var WalletKitAuthProvider = ({
   return /* @__PURE__ */ jsx(WalletKitAuthContext.Provider, { value, children: typeof children === "function" ? children(value) : children });
 };
 
+// src/WalletKitProvider.tsx
+import { WagmiProvider, cookieToInitialState } from "wagmi";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { jsx as jsx2 } from "react/jsx-runtime";
+var queryClient = new QueryClient();
+var WalletKitProvider = ({
+  theme = "dark",
+  debug = false,
+  maunalExecuteConnectedCallbacks = false,
+  isMainnet = true,
+  cookies,
+  logo,
+  appKit,
+  children
+}) => {
+  const initialState = cookieToInitialState(appKit.config, cookies);
+  return /* @__PURE__ */ jsx2(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsx2(WagmiProvider, { config: appKit.config, initialState, children: /* @__PURE__ */ jsx2(
+    WalletKitConnectProvider,
+    {
+      debug,
+      isMainnet,
+      logo,
+      theme,
+      maunalExecuteConnectedCallbacks,
+      getWalletInfo: appKit.getWalletInfo,
+      children
+    }
+  ) }) });
+};
+
 // src/hooks/useWalletKitConnect.ts
 import { use } from "react";
 function useWalletKitConnect() {
@@ -281,7 +310,6 @@ export {
   Status,
   WalletKitAuthContext,
   WalletKitAuthProvider,
-  WalletKitContext,
   WalletKitProvider,
   bsc,
   bscTestnet,

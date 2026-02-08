@@ -3,12 +3,12 @@ export { AppKitNetwork, bsc, bscTestnet, mainnet, sepolia, solana, solanaDevnet 
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import * as react from 'react';
 import { Views } from '@reown/appkit/react';
-import { Config } from 'wagmi';
-import { ConnectedWalletInfo } from '@reown/appkit';
+import { initAppKit } from './utils.js';
+export { clearLocalStorageByPrefix, clearStoredJWT, getJWTExpirationTime, getSignMessage, getStoredJWT, isJWTExpired, parseJSON, storeJWT } from './utils.js';
 import * as web3 from '@ywwwtseng/web3';
 import { Address } from 'viem';
-export { clearLocalStorageByPrefix, clearStoredJWT, getJWTExpirationTime, getSignMessage, getStoredJWT, initAppKit, isJWTExpired, parseJSON, storeJWT } from './utils.js';
 import '@reown/appkit-controllers';
+import 'wagmi';
 
 type Token = {
     id: string;
@@ -45,24 +45,15 @@ declare const WalletKitAuthProvider: ({ url, appKey, onSignInSuccess, children, 
     children: React.ReactNode | ((state: WalletKitAuthContextState) => React.ReactNode);
 }) => react_jsx_runtime.JSX.Element;
 
-type AppKitConfig = {
-    networks?: [AppKitNetwork, ...AppKitNetwork[]];
-    includeWalletIds?: string[];
-};
-interface WalletKitContextType {
-    getWalletInfo?: () => ConnectedWalletInfo | undefined;
-}
-declare const WalletKitContext: react.Context<WalletKitContextType>;
-declare const WalletKitProvider: ({ theme, debug, maunalExecuteConnectedCallbacks, isMainnet, config, cookies, logo, children, getWalletInfo, }: {
+declare const WalletKitProvider: ({ theme, debug, maunalExecuteConnectedCallbacks, isMainnet, cookies, logo, appKit, children, }: {
     theme?: "light" | "dark";
     debug?: boolean;
     maunalExecuteConnectedCallbacks?: boolean;
     isMainnet?: boolean;
-    config: Config;
     cookies?: string | null;
     logo: React.ReactNode;
+    appKit: ReturnType<typeof initAppKit>;
     children: React.ReactNode;
-    getWalletInfo?: () => ConnectedWalletInfo | undefined;
 }) => react_jsx_runtime.JSX.Element;
 
 declare function useConnect(): {
@@ -132,4 +123,4 @@ interface AuthenticatedGuardProps {
 }
 declare function AuthenticatedGuard({ redirectTo, children }: AuthenticatedGuardProps): react.ReactNode;
 
-export { type AppKitConfig, AuthenticatedGuard, JWT_ADDRESS_KEY, JWT_TOKEN_KEY, Status, type Token, WalletKitAuthContext, type WalletKitAuthContextState, WalletKitAuthProvider, WalletKitContext, WalletKitProvider, useConnect, useWalletKitAuth, useWalletKitConnect };
+export { AuthenticatedGuard, JWT_ADDRESS_KEY, JWT_TOKEN_KEY, Status, type Token, WalletKitAuthContext, type WalletKitAuthContextState, WalletKitAuthProvider, WalletKitProvider, initAppKit, useConnect, useWalletKitAuth, useWalletKitConnect };
