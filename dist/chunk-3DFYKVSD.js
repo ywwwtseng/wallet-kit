@@ -244,8 +244,20 @@ function useAccounts() {
 // src/wagmi.ts
 import { getBalance, sendTransaction } from "wagmi/actions";
 import { Actions } from "wagmi/tempo";
-import { writeContract } from "@wagmi/core";
+import { writeContract, getConnection } from "@wagmi/core";
 import { useConfig, useAccount } from "wagmi";
+async function wakeWallet(config) {
+  try {
+    const connection = getConnection(config);
+    const raw = connection.connector ? await connection.connector.getProvider() : void 0;
+    const provider = raw;
+    if (provider?.request) {
+      await provider.request({ method: "eth_chainId" });
+      console.log("wallet waked");
+    }
+  } catch {
+  }
+}
 var ERC20_ABI = [
   {
     name: "transfer",
@@ -278,6 +290,7 @@ var sendWagmiTransaction = async (config, {
   amount,
   chainId
 }) => {
+  await wakeWallet(config);
   if (tokenAddress) {
     return await writeContract(config, {
       address: tokenAddress,

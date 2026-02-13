@@ -4,7 +4,7 @@ import {
   useAccounts,
   useConfig,
   useConnect
-} from "./chunk-IEW4WCJD.js";
+} from "./chunk-3DFYKVSD.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
