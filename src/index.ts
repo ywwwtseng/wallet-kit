@@ -6,5 +6,6 @@ export * from './WalletKitProvider';
 export * from './hooks/useConnect';
 export * from './hooks/useWalletKitConnect';
 export * from './hooks/useWalletKitAuth';
+export * from './hooks/useBalance';
 export * from './AuthenticatedGuard';
 export * from './utils';

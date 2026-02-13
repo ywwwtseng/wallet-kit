@@ -1,24 +1,6 @@
-import { getBalance, sendTransaction } from 'wagmi/actions';
-import { Actions } from 'wagmi/tempo';
-import { writeContract, getConnection, type Config } from '@wagmi/core';
+import { sendTransaction, writeContract } from 'wagmi/actions';
+import { type Config } from '@wagmi/core';
 import type { Address, Abi } from 'viem';
-
-/** 發送輕量請求以喚醒錢包擴充，有助於彈出確認視窗 */
-async function wakeWallet(config: Config): Promise<void> {
-  try {
-    const connection = getConnection(config);
-    const raw = connection.connector ? await connection.connector.getProvider() : undefined;
-    const provider = raw as { request: (args: { method: string }) => Promise<unknown> } | undefined;
-    if (provider?.request) {
-      await provider.request({ method: 'eth_chainId' });
-      console.log('wallet waked');
-    }
-  } catch {
-    // 忽略錯誤，不影響後續 writeContract
-  }
-}
-
-export { useConfig as useWagmiConfig, useAccount as useWagmiAccount } from 'wagmi';
 
 const ERC20_ABI = [
   {
@@ -61,8 +43,6 @@ export const sendWagmiTransaction = async (
     chainId: number;
   }
 ) => {
-  await wakeWallet(config);
-
   if (tokenAddress) {
     return await writeContract(config, {
       address: tokenAddress,
@@ -80,20 +60,3 @@ export const sendWagmiTransaction = async (
   }
 };
 
-export const getWagmiBalance = async (config: Config, { address, token, chainId }: { address: Address; token?: Address; chainId: number }) => {
-  if (token) {
-    const balance = await Actions.token.getBalance(config, {
-      account: address,
-      token: token,
-    });
-
-    return balance;
-  } else {
-    const balance = await getBalance(config, {
-      address,
-      chainId,
-    });
-
-    return balance.value;
-  }
-};

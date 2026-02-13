@@ -28,9 +28,9 @@ import { useSwitchChain, useConnection, useChainId, useConfig } from 'wagmi';
 import type { Address } from 'viem';
 import { ContinueInWalletModal, type ContinueInWalletModalType } from './ContinueInWalletModal';
 import { mainnet, sepolia, bsc, bscTestnet, solana, solanaDevnet } from './networks';
-import { useAccounts, type Accounts } from './hooks/useAccounts';
+import { useAccounts, type Accounts, type Account } from './hooks/useAccounts';
 import { useConnect } from './hooks/useConnect';
-import { getWagmiBalance, sendWagmiTransaction } from './wagmi';
+import { sendWagmiTransaction } from './wagmi';
 import { clearLocalStorageByPrefix } from './utils';
 import { Token } from './types';
 
@@ -40,18 +40,19 @@ export interface WalletKitConnectContextState {
   isSendTxPending: boolean;
   error: Error | null;
   accounts: Accounts;
-  balance: Record<string, string>;
+  balances: Record<string, string>;
   currentChainId: number | undefined;
   connectedCallbacks: {
     bsc: Function[];
     ethereum: Function[];
     solana: Function[];
   };
+  getAccount: (network?: string | null) => Account | undefined;
   executeConnectedCallbacks: (network: string) => Promise<void>;
   openContinueInWalletModal: (type: ContinueInWalletModalType) => void;
   closeContinueInWalletModal: () => void;
-  getBalance: (token: Token) => Promise<void>;
-  getNetwork: (network: string) => AppKitNetwork | undefined;
+  setBalances: (balances: Record<string, string>) => void;
+  getNetwork: (network?: string | null) => AppKitNetwork | undefined;
   open: (options?: { view?: Views }) => Promise<void>;
   disconnect: (clearLocalStorage?: boolean) => Promise<void>;
   signTransaction: (params: {
@@ -93,12 +94,15 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
       isConnected: false,
     },
   },
-  balance: {},
+  balances: {},
   currentChainId: undefined,
   connectedCallbacks: {
     bsc: [],
     ethereum: [],
     solana: [],
+  },
+  getAccount: () => {
+    throw new Error('getAccount is not implemented');
   },
   executeConnectedCallbacks: () => {
     throw new Error('executeConnectedCallbacks is not implemented');
@@ -109,8 +113,8 @@ export const WalletKitConnectContext = createContext<WalletKitConnectContextStat
   closeContinueInWalletModal: () => {
     throw new Error('closeContinueInWalletModal is not implemented');
   },
-  getBalance: () => {
-    throw new Error('getBalance is not implemented');
+  setBalances: () => {
+    throw new Error('setBalances is not implemented');
   },
   getNetwork: () => {
     throw new Error('getNetwork is not implemented');
@@ -156,7 +160,7 @@ export const WalletKitConnectProvider = ({
   });
   const config = useConfig();
   const [connectError, setConnectError] = useState<Error | null>(null);
-  const [balance, setBalance] = useState<Record<string, string>>({});
+  const [balances, setBalances] = useState<Record<string, string>>({});
   const [continueInWalletModal, setContinueInWalletModal] = useState<{ open: boolean, type: ContinueInWalletModalType }>({ open: false, type: undefined });
   const [isSendTxPending, setIsSendTxPending] = useState(false);
   const { disconnect: _disconnect } = useDisconnect();
@@ -241,7 +245,7 @@ export const WalletKitConnectProvider = ({
     }
   }, [_open]);
 
-  const getNetwork = useCallback((network: string) => {
+  const getNetwork = useCallback((network?: string | null) => {
     if (network === 'bsc') {
       return isMainnet ? bsc : bscTestnet;
     }  else if (network === 'ethereum') {
@@ -252,13 +256,13 @@ export const WalletKitConnectProvider = ({
     return undefined;
   }, [isMainnet]);
 
-  const getAccountAddress = useCallback((network: string): Address | string | undefined => {
+  const getAccount = useCallback((network?: string | null): Account | undefined => {
     if (network === 'bsc') {
-      return accounts.bsc.address;
+      return accounts.bsc;
     } else if (network === 'ethereum') {
-      return accounts.ethereum.address;
+      return accounts.ethereum;
     } else if (network === 'solana') {
-      return accounts.solana.address;
+      return accounts.solana;
     }
     return undefined;
   }, [accounts]);
@@ -272,42 +276,6 @@ export const WalletKitConnectProvider = ({
       // switchAppKitNetwork 会自动验证网络是否在 createAppKit 的 networks 配置中
       // 如果不在，它会抛出相应的错误
       await switchAppKitNetwork(targetNetwork);
-    }
-  };
-
-  const getBalance = async (token: Token) => {
-    if (token.network === 'solana') {
-      if (!connection || !accounts.solana.address) {
-        throw Error('user is disconnected');
-      }
-
-      const balance = await web3.getBalance({
-        network: token.network,
-        connection: connection,
-      })({
-        address: accounts.solana.address,
-        tokenAddress: token.token_address,
-        tokenProgram: token.token_program,
-      });
-
-      setBalance({ [token.id]: String(balance) });
-    } else {
-      const address = getAccountAddress(token.network) as Address;
-      if (!address) {
-        throw Error('user is disconnected');
-      }
-      const network = getNetwork(token.network);
-      if (!network) {
-        throw Error('network not found');
-      }
-
-      const balance = await getWagmiBalance(config, {
-        address,
-        token: (token.token_address ?? undefined) as Address | undefined,
-        chainId: network.id as number,
-      });
-
-      setBalance({ [token.id]: String(balance) });
     }
   };
 
@@ -429,7 +397,7 @@ export const WalletKitConnectProvider = ({
       }
 
       const network = getNetwork(token.network);
-      const address = getAccountAddress(token.network) as Address;
+      const address = getAccount(token.network)?.address as Address;
 
       if (!network) {
         throw Error('network not found');
@@ -482,18 +450,19 @@ export const WalletKitConnectProvider = ({
     () => ({
       isMainnet,
       accounts,
-      balance,
+      balances,
       isConnectPending,
       isSendTxPending,
       error: connectError,
       currentChainId,
       connectedCallbacks: connectedCallbacksRef.current,
+      getAccount,
       executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
       open,
       disconnect,
-      getBalance,
+      setBalances,
       getNetwork,
       signTransaction,
       sendTransaction,
@@ -502,16 +471,17 @@ export const WalletKitConnectProvider = ({
     [
       isMainnet,
       accounts,
-      balance,
+      balances,
       isConnectPending,
       isSendTxPending,
       currentChainId,
       connectError,
+      getAccount,
       executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
       open,
-      getBalance,
+      setBalances,
       getNetwork,
       disconnect,
       signTransaction,

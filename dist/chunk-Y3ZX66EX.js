@@ -242,22 +242,8 @@ function useAccounts() {
 }
 
 // src/wagmi.ts
-import { getBalance, sendTransaction } from "wagmi/actions";
-import { Actions } from "wagmi/tempo";
-import { writeContract, getConnection } from "@wagmi/core";
+import { sendTransaction, writeContract } from "wagmi/actions";
 import { useConfig, useAccount } from "wagmi";
-async function wakeWallet(config) {
-  try {
-    const connection = getConnection(config);
-    const raw = connection.connector ? await connection.connector.getProvider() : void 0;
-    const provider = raw;
-    if (provider?.request) {
-      await provider.request({ method: "eth_chainId" });
-      console.log("wallet waked");
-    }
-  } catch {
-  }
-}
 var ERC20_ABI = [
   {
     name: "transfer",
@@ -290,7 +276,6 @@ var sendWagmiTransaction = async (config, {
   amount,
   chainId
 }) => {
-  await wakeWallet(config);
   if (tokenAddress) {
     return await writeContract(config, {
       address: tokenAddress,
@@ -305,21 +290,6 @@ var sendWagmiTransaction = async (config, {
       value: typeof amount === "string" ? BigInt(amount) : amount,
       chainId
     });
-  }
-};
-var getWagmiBalance = async (config, { address, token, chainId }) => {
-  if (token) {
-    const balance = await Actions.token.getBalance(config, {
-      account: address,
-      token
-    });
-    return balance;
-  } else {
-    const balance = await getBalance(config, {
-      address,
-      chainId
-    });
-    return balance.value;
   }
 };
 
@@ -347,12 +317,15 @@ var WalletKitConnectContext = createContext({
       isConnected: false
     }
   },
-  balance: {},
+  balances: {},
   currentChainId: void 0,
   connectedCallbacks: {
     bsc: [],
     ethereum: [],
     solana: []
+  },
+  getAccount: () => {
+    throw new Error("getAccount is not implemented");
   },
   executeConnectedCallbacks: () => {
     throw new Error("executeConnectedCallbacks is not implemented");
@@ -363,8 +336,8 @@ var WalletKitConnectContext = createContext({
   closeContinueInWalletModal: () => {
     throw new Error("closeContinueInWalletModal is not implemented");
   },
-  getBalance: () => {
-    throw new Error("getBalance is not implemented");
+  setBalances: () => {
+    throw new Error("setBalances is not implemented");
   },
   getNetwork: () => {
     throw new Error("getNetwork is not implemented");
@@ -401,7 +374,7 @@ var WalletKitConnectProvider = ({
   });
   const config = useConfig2();
   const [connectError, setConnectError] = useState3(null);
-  const [balance, setBalance] = useState3({});
+  const [balances, setBalances] = useState3({});
   const [continueInWalletModal, setContinueInWalletModal] = useState3({ open: false, type: void 0 });
   const [isSendTxPending, setIsSendTxPending] = useState3(false);
   const { disconnect: _disconnect } = useDisconnect();
@@ -482,13 +455,13 @@ var WalletKitConnectProvider = ({
     }
     return void 0;
   }, [isMainnet]);
-  const getAccountAddress = useCallback2((network) => {
+  const getAccount = useCallback2((network) => {
     if (network === "bsc") {
-      return accounts.bsc.address;
+      return accounts.bsc;
     } else if (network === "ethereum") {
-      return accounts.ethereum.address;
+      return accounts.ethereum;
     } else if (network === "solana") {
-      return accounts.solana.address;
+      return accounts.solana;
     }
     return void 0;
   }, [accounts]);
@@ -499,37 +472,6 @@ var WalletKitConnectProvider = ({
         throw new Error(`Network ${network} not found`);
       }
       await switchAppKitNetwork(targetNetwork);
-    }
-  };
-  const getBalance3 = async (token) => {
-    if (token.network === "solana") {
-      if (!connection || !accounts.solana.address) {
-        throw Error("user is disconnected");
-      }
-      const balance2 = await web3.getBalance({
-        network: token.network,
-        connection
-      })({
-        address: accounts.solana.address,
-        tokenAddress: token.token_address,
-        tokenProgram: token.token_program
-      });
-      setBalance({ [token.id]: String(balance2) });
-    } else {
-      const address = getAccountAddress(token.network);
-      if (!address) {
-        throw Error("user is disconnected");
-      }
-      const network = getNetwork(token.network);
-      if (!network) {
-        throw Error("network not found");
-      }
-      const balance2 = await getWagmiBalance(config, {
-        address,
-        token: token.token_address ?? void 0,
-        chainId: network.id
-      });
-      setBalance({ [token.id]: String(balance2) });
     }
   };
   const createTransaction = useCallback2(
@@ -618,7 +560,7 @@ var WalletKitConnectProvider = ({
         return signature;
       }
       const network = getNetwork(token.network);
-      const address = getAccountAddress(token.network);
+      const address = getAccount(token.network)?.address;
       if (!network) {
         throw Error("network not found");
       }
@@ -654,18 +596,19 @@ var WalletKitConnectProvider = ({
     () => ({
       isMainnet,
       accounts,
-      balance,
+      balances,
       isConnectPending,
       isSendTxPending,
       error: connectError,
       currentChainId,
       connectedCallbacks: connectedCallbacksRef.current,
+      getAccount,
       executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
       open,
       disconnect,
-      getBalance: getBalance3,
+      setBalances,
       getNetwork,
       signTransaction,
       sendTransaction: sendTransaction2,
@@ -674,16 +617,17 @@ var WalletKitConnectProvider = ({
     [
       isMainnet,
       accounts,
-      balance,
+      balances,
       isConnectPending,
       isSendTxPending,
       currentChainId,
       connectError,
+      getAccount,
       executeConnectedCallbacks,
       openContinueInWalletModal,
       closeContinueInWalletModal,
       open,
-      getBalance3,
+      setBalances,
       getNetwork,
       disconnect,
       signTransaction,

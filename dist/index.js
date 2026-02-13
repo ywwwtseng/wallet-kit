@@ -4,7 +4,7 @@ import {
   useAccounts,
   useConfig,
   useConnect
-} from "./chunk-3DFYKVSD.js";
+} from "./chunk-Y3ZX66EX.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -287,13 +287,69 @@ function useWalletKitAuth() {
   return context;
 }
 
+// src/hooks/useBalance.ts
+import { use as use3, useEffect as useEffect2 } from "react";
+import { useAppKitConnection } from "@reown/appkit-adapter-solana/react";
+import * as web3 from "@ywwwtseng/web3";
+import { getBalance } from "wagmi/actions";
+import { Actions } from "wagmi/tempo";
+import { useConfig as useConfig2 } from "wagmi";
+function useBalance(token) {
+  const config = useConfig2();
+  const { balances, setBalances, getAccount, getNetwork } = use3(WalletKitConnectContext);
+  const { connection } = useAppKitConnection();
+  useEffect2(() => {
+    if (!token) {
+      return;
+    }
+    const account = getAccount(token.network);
+    if (!account || !account.address || !account.isConnected) {
+      return;
+    }
+    if (token.network === "solana") {
+      if (!connection) {
+        return;
+      }
+      web3.utils.solana.getBalance(connection, {
+        address: account.address,
+        tokenAddress: token.token_address,
+        tokenProgram: token.token_program
+      }).then((balance) => {
+        setBalances({ [token.id]: String(balance) });
+      });
+    } else if (token.network) {
+      const network = getNetwork(token.network);
+      if (!network) {
+        throw Error("network not found");
+      }
+      if (token.token_address) {
+        Actions.token.getBalance(config, {
+          account: account.address,
+          token: token.token_address,
+          chainId: network.id
+        }).then((balance) => {
+          setBalances({ [token.id]: String(balance) });
+        });
+      } else {
+        getBalance(config, {
+          address: account.address,
+          chainId: network.id
+        }).then((balance) => {
+          setBalances({ [token.id]: String(balance.value) });
+        });
+      }
+    }
+  }, [token]);
+  return token ? balances[token.id] : void 0;
+}
+
 // src/AuthenticatedGuard.tsx
-import { useEffect as useEffect2 } from "react";
+import { useEffect as useEffect3 } from "react";
 import { useNavigate } from "@ywwwtseng/react-kit";
 function AuthenticatedGuard({ redirectTo, children }) {
   const { status } = useWalletKitAuth();
   const navigate = useNavigate();
-  useEffect2(() => {
+  useEffect3(() => {
     if (status === "unauthenticated" /* UNAUTHENTICATED */) {
       navigate(redirectTo);
     }
@@ -326,6 +382,7 @@ export {
   solana,
   solanaDevnet,
   storeJWT,
+  useBalance,
   useConnect,
   useWalletKitAuth,
   useWalletKitConnect

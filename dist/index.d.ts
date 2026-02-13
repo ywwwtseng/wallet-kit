@@ -80,18 +80,19 @@ interface WalletKitConnectContextState {
     isSendTxPending: boolean;
     error: Error | null;
     accounts: Accounts;
-    balance: Record<string, string>;
+    balances: Record<string, string>;
     currentChainId: number | undefined;
     connectedCallbacks: {
         bsc: Function[];
         ethereum: Function[];
         solana: Function[];
     };
+    getAccount: (network?: string | null) => Account | undefined;
     executeConnectedCallbacks: (network: string) => Promise<void>;
     openContinueInWalletModal: (type: ContinueInWalletModalType) => void;
     closeContinueInWalletModal: () => void;
-    getBalance: (token: Token) => Promise<void>;
-    getNetwork: (network: string) => AppKitNetwork | undefined;
+    setBalances: (balances: Record<string, string>) => void;
+    getNetwork: (network?: string | null) => AppKitNetwork | undefined;
     open: (options?: {
         view?: Views;
     }) => Promise<void>;
@@ -117,10 +118,12 @@ declare function useWalletKitConnect(): WalletKitConnectContextState;
 
 declare function useWalletKitAuth(): WalletKitAuthContextState;
 
+declare function useBalance(token?: Token | null): string;
+
 interface AuthenticatedGuardProps {
     redirectTo: string;
     children: React.ReactNode;
 }
 declare function AuthenticatedGuard({ redirectTo, children }: AuthenticatedGuardProps): react.ReactNode;
 
-export { AuthenticatedGuard, JWT_ADDRESS_KEY, JWT_TOKEN_KEY, Status, type Token, WalletKitAuthContext, type WalletKitAuthContextState, WalletKitAuthProvider, WalletKitProvider, initAppKit, useConnect, useWalletKitAuth, useWalletKitConnect };
+export { AuthenticatedGuard, JWT_ADDRESS_KEY, JWT_TOKEN_KEY, Status, type Token, WalletKitAuthContext, type WalletKitAuthContextState, WalletKitAuthProvider, WalletKitProvider, initAppKit, useBalance, useConnect, useWalletKitAuth, useWalletKitConnect };
