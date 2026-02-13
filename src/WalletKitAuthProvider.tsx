@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState, useMemo, createContext, useRef } from
 
 import type { Address } from 'viem';
 import { type Views, useDisconnect } from '@reown/appkit/react';
+import { useConfig } from 'wagmi';
 import { signMessage } from 'wagmi/actions';
 import { useAccounts } from './hooks/useAccounts';
 import { useConnect } from './hooks/useConnect';
-import { useWagmiConfig } from './wagmi';
 import { getStoredJWT, clearStoredJWT, storeJWT, getSignMessage, isJWTExpired, getJWTExpirationTime } from './utils';
 import { Status } from './constants';
 
@@ -52,7 +52,7 @@ export const WalletKitAuthProvider = ({
   const { open } = useConnect();
   const accounts = useAccounts();
 
-  const config = useWagmiConfig();
+  const config = useConfig();
   const [initialized, setInitialized] = useState(false);
   const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState(false);
   const [isSigningInProcessing, setIsSigningInProcessing] = useState(false);

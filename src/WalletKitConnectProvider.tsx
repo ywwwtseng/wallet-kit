@@ -30,7 +30,7 @@ import { ContinueInWalletModal, type ContinueInWalletModalType } from './Continu
 import { mainnet, sepolia, bsc, bscTestnet, solana, solanaDevnet } from './networks';
 import { useAccounts, type Accounts, type Account } from './hooks/useAccounts';
 import { useConnect } from './hooks/useConnect';
-import { sendWagmiTransaction } from './wagmi';
+import { useTransfer } from './hooks/useTransfer';
 import { clearLocalStorageByPrefix } from './utils';
 import { Token } from './types';
 
@@ -170,6 +170,7 @@ export const WalletKitConnectProvider = ({
   const switchChain = useSwitchChain();
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
+  const { transfer } = useTransfer();
 
   const executeConnectedCallbacks = useCallback(async (network: string) => {
     if (network === 'bsc') {
@@ -419,11 +420,12 @@ export const WalletKitConnectProvider = ({
         await switchChain.mutateAsync({ chainId });
       }
 
-      const hash = await sendWagmiTransaction(config, {
+      const hash = await transfer({
         tokenAddress: token.token_address as Address | undefined,
         to: destination as Address,
         amount: typeof amount === 'string' ? BigInt(amount) : amount,
         chainId,
+        account: address,
       });
 
       if (debug) {

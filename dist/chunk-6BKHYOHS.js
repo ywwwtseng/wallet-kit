@@ -45,7 +45,7 @@ import {
 } from "@reown/appkit/react";
 import { useAppKitConnection } from "@reown/appkit-adapter-solana/react";
 import * as web3 from "@ywwwtseng/web3";
-import { useSwitchChain, useConnection, useChainId, useConfig as useConfig2 } from "wagmi";
+import { useSwitchChain, useConnection, useChainId, useConfig } from "wagmi";
 
 // src/ContinueInWalletModal.tsx
 import { Modal, Typography } from "@ywwwtseng/react-kit";
@@ -241,9 +241,10 @@ function useAccounts() {
   }, [solanaAccount, ethersAccount, stabilizedAccount]);
 }
 
-// src/wagmi.ts
-import { sendTransaction, writeContract } from "wagmi/actions";
-import { useConfig, useAccount } from "wagmi";
+// src/hooks/useTransfer.ts
+import { useWriteContract, useSendTransaction } from "wagmi";
+
+// src/abi.ts
 var ERC20_ABI = [
   {
     name: "transfer",
@@ -270,28 +271,45 @@ var ERC20_ABI = [
     outputs: [{ name: "", type: "uint8" }]
   }
 ];
-var sendWagmiTransaction = async (config, {
-  tokenAddress,
-  to,
-  amount,
-  chainId
-}) => {
-  if (tokenAddress) {
-    return await writeContract(config, {
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: "transfer",
-      chainId,
-      args: [to, typeof amount === "string" ? BigInt(amount) : amount]
-    });
-  } else {
-    return await sendTransaction(config, {
-      to,
-      value: typeof amount === "string" ? BigInt(amount) : amount,
-      chainId
-    });
-  }
-};
+
+// src/hooks/useTransfer.ts
+function useTransfer() {
+  const writeContract = useWriteContract();
+  const sendTransaction = useSendTransaction();
+  const transfer = async ({
+    account,
+    tokenAddress,
+    to,
+    amount,
+    chainId
+  }) => {
+    if (tokenAddress) {
+      const hash = await writeContract.mutateAsync({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: "transfer",
+        chainId,
+        args: [to, typeof amount === "string" ? BigInt(amount) : amount],
+        chain: void 0,
+        account
+      });
+      writeContract.reset();
+      return hash;
+    } else {
+      const hash = await sendTransaction.mutateAsync({
+        to,
+        value: typeof amount === "string" ? BigInt(amount) : amount,
+        chainId,
+        account
+      });
+      sendTransaction.reset();
+      return hash;
+    }
+  };
+  return {
+    transfer
+  };
+}
 
 // src/WalletKitConnectProvider.tsx
 import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
@@ -372,7 +390,7 @@ var WalletKitConnectProvider = ({
     ethereum: [],
     solana: []
   });
-  const config = useConfig2();
+  const config = useConfig();
   const [connectError, setConnectError] = useState3(null);
   const [balances, setBalances] = useState3({});
   const [continueInWalletModal, setContinueInWalletModal] = useState3({ open: false, type: void 0 });
@@ -384,6 +402,7 @@ var WalletKitConnectProvider = ({
   const switchChain = useSwitchChain();
   const { isConnected } = useConnection();
   const currentChainId = useChainId();
+  const { transfer } = useTransfer();
   const executeConnectedCallbacks = useCallback2(async (network) => {
     if (network === "bsc") {
       for (const callback of connectedCallbacksRef.current.bsc) {
@@ -533,7 +552,7 @@ var WalletKitConnectProvider = ({
     },
     [accounts.solana, solanaProvider, connection, openContinueInWalletModal, closeContinueInWalletModal]
   );
-  const sendTransaction2 = async ({
+  const sendTransaction = async ({
     feePayer,
     source,
     token,
@@ -574,11 +593,12 @@ var WalletKitConnectProvider = ({
       if (currentChainId !== chainId) {
         await switchChain.mutateAsync({ chainId });
       }
-      const hash = await sendWagmiTransaction(config, {
+      const hash = await transfer({
         tokenAddress: token.token_address,
         to: destination,
         amount: typeof amount === "string" ? BigInt(amount) : amount,
-        chainId
+        chainId,
+        account: address
       });
       if (debug) {
         console.log("[WalletKitConnectProvider] sendTransaction:", hash);
@@ -611,7 +631,7 @@ var WalletKitConnectProvider = ({
       setBalances,
       getNetwork,
       signTransaction,
-      sendTransaction: sendTransaction2,
+      sendTransaction,
       switchNetwork
     }),
     [
@@ -631,7 +651,7 @@ var WalletKitConnectProvider = ({
       getNetwork,
       disconnect,
       signTransaction,
-      sendTransaction2,
+      sendTransaction,
       switchNetwork
     ]
   );
@@ -658,7 +678,6 @@ var WalletKitConnectProvider = ({
 export {
   useAccounts,
   useConnect,
-  useConfig,
   WalletKitConnectContext,
   WalletKitConnectProvider
 };

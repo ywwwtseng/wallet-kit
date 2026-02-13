@@ -2,9 +2,8 @@ import {
   WalletKitConnectContext,
   WalletKitConnectProvider,
   useAccounts,
-  useConfig,
   useConnect
-} from "./chunk-Y3ZX66EX.js";
+} from "./chunk-6BKHYOHS.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -31,6 +30,7 @@ import {
 // src/WalletKitAuthProvider.tsx
 import { useCallback, useEffect, useState, useMemo, createContext, useRef } from "react";
 import { useDisconnect } from "@reown/appkit/react";
+import { useConfig } from "wagmi";
 import { signMessage } from "wagmi/actions";
 import { jsx } from "react/jsx-runtime";
 var WalletKitAuthContext = createContext({
