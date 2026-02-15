@@ -1,6 +1,6 @@
 import {
   clearLocalStorageByPrefix
-} from "./chunk-WAXLMAZT.js";
+} from "./chunk-HN22XQYT.js";
 import {
   bsc,
   bscTestnet,
@@ -205,7 +205,11 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { useEffect, useRef, useState as useState2 } from "react";
 function useStabilizedAccount(account) {
   const statusRef = useRef(void 0);
-  const [stabilizedAccount, setStabilizedAccount] = useState2({ address: account.address, isConnected: account.isConnected, status: void 0 });
+  const [stabilizedAccount, setStabilizedAccount] = useState2({
+    address: account.address,
+    isConnected: account.isConnected,
+    status: "connecting"
+  });
   useEffect(() => {
     if (account.status === "connecting" || account.status === "reconnecting") {
       if (!statusRef.current) {

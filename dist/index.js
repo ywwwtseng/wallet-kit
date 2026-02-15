@@ -3,7 +3,7 @@ import {
   WalletKitConnectProvider,
   useAccounts,
   useConnect
-} from "./chunk-6BKHYOHS.js";
+} from "./chunk-YPHCKXLZ.js";
 import {
   JWT_ADDRESS_KEY,
   JWT_TOKEN_KEY,
@@ -17,7 +17,7 @@ import {
   isJWTExpired,
   parseJSON,
   storeJWT
-} from "./chunk-WAXLMAZT.js";
+} from "./chunk-HN22XQYT.js";
 import {
   bsc,
   bscTestnet,
@@ -63,10 +63,18 @@ var WalletKitAuthProvider = ({
   const [isLoggingOutProcessing, setIsLoggingOutProcessing] = useState(false);
   const [isSigningInProcessing, setIsSigningInProcessing] = useState(false);
   const status = useMemo(() => {
-    if (!initialized || isLoggingOutProcessing || isSigningInProcessing) return "pending" /* PENDING */;
-    if (!!jwtToken && !!accounts.bsc.address) return "authenticated" /* AUTHENTICATED */;
-    return "unauthenticated" /* UNAUTHENTICATED */;
-  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, accounts.bsc.address]);
+    if (accounts.bsc.status === "connecting" || accounts.bsc.status === "reconnecting" || isLoggingOutProcessing) return "pending" /* PENDING */;
+    if (!initialized) return "initializing" /* INITIALIZING */;
+    if (!jwtToken) {
+      if (accounts.bsc.address) {
+        return "waiting_for_authentication" /* WAITING_FOR_AUTHENTICATION */;
+      }
+      return "unauthenticated" /* UNAUTHENTICATED */;
+    }
+    if (isSigningInProcessing) return "authenticating" /* AUTHENTICATING */;
+    return "authenticated" /* AUTHENTICATED */;
+  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, accounts.bsc]);
+  console.log("WalletKitAuthProvider", status);
   const signIn = useCallback(
     async (view) => {
       try {
@@ -112,15 +120,12 @@ var WalletKitAuthProvider = ({
     }, timeUntilExpiration);
   }, [appKey]);
   useEffect(() => {
-    if (isLoggingOutProcessing) return;
-    if (!accounts.bsc.status || accounts.bsc.status === "reconnecting" || accounts.bsc.status === "connecting") {
-      return;
-    }
+    if (status !== "initializing" /* INITIALIZING */) return;
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
       logoutTimerRef.current = null;
     }
-    if (!initialized && accounts.bsc.status === "disconnected") {
+    if (accounts.bsc.status === "disconnected") {
       logoutTimerRef.current = setTimeout(() => {
         signOut().then(() => {
           setInitialized(true);
@@ -131,25 +136,18 @@ var WalletKitAuthProvider = ({
     ;
     setInitialized(false);
     const stored = getStoredJWT(appKey);
-    if (stored && stored.address === accounts.bsc.address) {
-      if (isJWTExpired(stored.token)) {
-        clearStoredJWT(appKey);
-        setJwtToken(null);
-      } else {
-        setJwtToken(stored.token);
-        setupExpirationTimer(stored.token);
-      }
-    } else if (stored && stored.address !== accounts.bsc.address) {
-      console.log("Wallet address mismatch, clear JWT token.", stored.address, accounts.bsc.address);
-      clearStoredJWT(appKey);
+    if (stored && stored.address === accounts.bsc.address && !isJWTExpired(stored.token)) {
+      setJwtToken(stored.token);
+      setupExpirationTimer(stored.token);
+    } else {
       setJwtToken(null);
+      clearStoredJWT(appKey);
     }
     setInitialized(true);
-  }, [initialized, accounts.bsc, isLoggingOutProcessing, setupExpirationTimer, appKey]);
+  }, [status]);
   useEffect(() => {
-    if (isLoggingOutProcessing) return;
-    if (!accounts.bsc.address && jwtToken) {
-      console.log("Wallet disconnected, JWT token cleared.", accounts.bsc.address, accounts.bsc.status);
+    if (status !== "authenticated" /* AUTHENTICATED */) return;
+    if (!accounts.bsc.address) {
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;
@@ -157,65 +155,58 @@ var WalletKitAuthProvider = ({
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
-  }, [accounts.bsc.address, jwtToken, isLoggingOutProcessing]);
+  }, [status]);
   useEffect(() => {
-    if (isLoggingOutProcessing) return;
-    if (accounts.bsc.status !== "connected") return;
-    if (initialized && accounts.bsc.address && !jwtToken) {
-      (async () => {
-        try {
-          if (!accounts.bsc.address) {
-            throw new Error("Wallet not connected");
-          }
-          setIsSigningInProcessing(true);
-          const { message, nonce } = await getSignMessage(url, accounts.bsc.address);
-          if (!config) {
-            throw new Error("Wagmi config not available");
-          }
-          const signature = await signMessage(config, {
-            message,
-            account: accounts.bsc.address
-          });
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              type: "mutate",
-              action: "auth:signin",
-              payload: {
-                address: accounts.bsc.address,
-                message,
-                signature,
-                nonce
-              }
-            })
-          });
-          if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: "Unknown error" }));
-            throw new Error(error.error || "Failed to sign in");
-          }
-          const data = await response.json();
-          const result = data.data;
-          storeJWT(appKey, result.token, result.address);
-          setJwtToken(result.token);
-          setupExpirationTimer(result.token);
-          onSignInSuccess?.();
-          return result;
-        } catch (error) {
-          disconnect();
-          console.error("Sign in error:", error);
-          throw error;
-        } finally {
-          setIsSigningInProcessing(false);
+    if (status !== "waiting_for_authentication" /* WAITING_FOR_AUTHENTICATION */) return;
+    (async () => {
+      try {
+        setIsSigningInProcessing(true);
+        const { message, nonce } = await getSignMessage(url, accounts.bsc.address);
+        if (!config) {
+          throw new Error("Wagmi config not available");
         }
-      })();
-    }
-  }, [initialized, accounts.bsc, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
+        const signature = await signMessage(config, {
+          message,
+          account: accounts.bsc.address
+        });
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            type: "mutate",
+            action: "auth:signin",
+            payload: {
+              address: accounts.bsc.address,
+              message,
+              signature,
+              nonce
+            }
+          })
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: "Unknown error" }));
+          throw new Error(error.error || "Failed to sign in");
+        }
+        const data = await response.json();
+        const result = data.data;
+        storeJWT(appKey, result.token, result.address);
+        setJwtToken(result.token);
+        setupExpirationTimer(result.token);
+        onSignInSuccess?.();
+        return result;
+      } catch (error) {
+        disconnect();
+        console.error("Sign in error:", error);
+        throw error;
+      } finally {
+        setIsSigningInProcessing(false);
+      }
+    })();
+  }, [status]);
   useEffect(() => {
     return () => {
-      setInitialized(false);
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;
@@ -345,16 +336,20 @@ function useBalance(token) {
 
 // src/AuthenticatedGuard.tsx
 import { useEffect as useEffect3 } from "react";
-import { useNavigate } from "@ywwwtseng/react-kit";
+import { useNavigate, useRoute } from "@ywwwtseng/react-kit";
 function AuthenticatedGuard({ redirectTo, children }) {
   const { status } = useWalletKitAuth();
   const navigate = useNavigate();
+  const route = useRoute();
   useEffect3(() => {
-    if (status === "unauthenticated" /* UNAUTHENTICATED */) {
+    if (route.name === redirectTo) {
+      return;
+    }
+    if (status === "unauthenticated" /* UNAUTHENTICATED */ || status === "waiting_for_authentication" /* WAITING_FOR_AUTHENTICATION */) {
       navigate(redirectTo);
     }
-  }, [status]);
-  if (status === "unauthenticated" /* UNAUTHENTICATED */ || status === "pending" /* PENDING */) {
+  }, [status, redirectTo, route.name]);
+  if (status !== "authenticated" /* AUTHENTICATED */) {
     return null;
   }
   return children;

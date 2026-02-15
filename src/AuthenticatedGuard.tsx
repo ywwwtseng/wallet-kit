@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from '@ywwwtseng/react-kit';
+import { useNavigate, useRoute } from '@ywwwtseng/react-kit';
 import { useWalletKitAuth } from './hooks/useWalletKitAuth';
 import { Status } from './constants';
 
@@ -11,14 +11,19 @@ interface AuthenticatedGuardProps {
 export function AuthenticatedGuard({ redirectTo, children }: AuthenticatedGuardProps) {
   const { status } = useWalletKitAuth();
   const navigate = useNavigate();
+  const route = useRoute();
 
   useEffect(() => {
-    if (status === Status.UNAUTHENTICATED) {
+    if (route.name === redirectTo) {
+      return;
+    }
+  
+    if (status === Status.UNAUTHENTICATED || status === Status.WAITING_FOR_AUTHENTICATION) {
       navigate(redirectTo);
     }
-  }, [status]);
+  }, [status, redirectTo, route.name]);
 
-  if (status === Status.UNAUTHENTICATED || status === Status.PENDING) {
+  if (status !== Status.AUTHENTICATED) {
     return null;
   }
 

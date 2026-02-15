@@ -1,5 +1,8 @@
 export enum Status {
   PENDING = 'pending',
+  INITIALIZING = 'initializing',
+  WAITING_FOR_AUTHENTICATION = 'waiting_for_authentication',
+  AUTHENTICATING = 'authenticating',
   AUTHENTICATED = 'authenticated',
   UNAUTHENTICATED = 'unauthenticated',
 }

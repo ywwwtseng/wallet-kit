@@ -12,6 +12,9 @@ import { SolanaAdapter } from "@reown/appkit-adapter-solana";
 // src/constants.ts
 var Status = /* @__PURE__ */ ((Status2) => {
   Status2["PENDING"] = "pending";
+  Status2["INITIALIZING"] = "initializing";
+  Status2["WAITING_FOR_AUTHENTICATION"] = "waiting_for_authentication";
+  Status2["AUTHENTICATING"] = "authenticating";
   Status2["AUTHENTICATED"] = "authenticated";
   Status2["UNAUTHENTICATED"] = "unauthenticated";
   return Status2;

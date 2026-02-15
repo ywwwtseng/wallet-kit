@@ -7,7 +7,11 @@ export function useStabilizedAccount(
   account: UseAppKitAccountReturn,
 ) {
   const statusRef = useRef<Status | undefined>(undefined);
-  const [stabilizedAccount, setStabilizedAccount] = useState({ address: account.address, isConnected: account.isConnected, status: undefined });
+  const [stabilizedAccount, setStabilizedAccount] = useState({
+    address: account.address,
+    isConnected: account.isConnected,
+    status: 'connecting' as Status,
+  });
 
 
   useEffect(() => {

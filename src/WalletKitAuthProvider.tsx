@@ -58,10 +58,24 @@ export const WalletKitAuthProvider = ({
   const [isSigningInProcessing, setIsSigningInProcessing] = useState(false);
 
   const status = useMemo(() => {
-    if (!initialized || isLoggingOutProcessing || isSigningInProcessing) return Status.PENDING;
-    if (!!jwtToken && !!accounts.bsc.address) return Status.AUTHENTICATED;
-    return Status.UNAUTHENTICATED;
-  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, accounts.bsc.address]);
+    if (
+      accounts.bsc.status === 'connecting' ||
+      accounts.bsc.status === 'reconnecting' ||
+      isLoggingOutProcessing
+    ) return Status.PENDING;
+    if (!initialized) return Status.INITIALIZING;
+    if (!jwtToken) {
+      if (accounts.bsc.address) {
+        return Status.WAITING_FOR_AUTHENTICATION;
+      }
+
+      return Status.UNAUTHENTICATED;
+    }
+    if (isSigningInProcessing) return Status.AUTHENTICATING;
+    return Status.AUTHENTICATED;
+  }, [initialized, isLoggingOutProcessing, isSigningInProcessing, jwtToken, accounts.bsc]);
+
+  console.log('WalletKitAuthProvider', status);
 
   const signIn = useCallback(
     async (view?: Views) => {
@@ -78,7 +92,6 @@ export const WalletKitAuthProvider = ({
 
   const signOut = useCallback(async () => {
     setIsLoggingOutProcessing(true);
-    // 清除定时器
     if (expirationTimerRef.current) {
       clearTimeout(expirationTimerRef.current);
       expirationTimerRef.current = null;
@@ -122,15 +135,7 @@ export const WalletKitAuthProvider = ({
 
   // 初始化时检查是否有存储的 JWT token
   useEffect(() => {
-    if (isLoggingOutProcessing) return;
-
-    if (
-      !accounts.bsc.status ||
-      accounts.bsc.status === 'reconnecting' ||
-      accounts.bsc.status === 'connecting'
-    ) {
-      return;
-    }
+    if (status !== Status.INITIALIZING) return;
 
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
@@ -138,7 +143,7 @@ export const WalletKitAuthProvider = ({
     }
 
     // 只在正在连接且有地址时才跳过（避免断开连接过程中的 connecting 状态阻止初始化）
-    if (!initialized && accounts.bsc.status === 'disconnected') {
+    if (accounts.bsc.status === 'disconnected') {
       logoutTimerRef.current = setTimeout(() => {
         signOut().then(() => {
           setInitialized(true);
@@ -150,32 +155,22 @@ export const WalletKitAuthProvider = ({
     setInitialized(false);
     const stored = getStoredJWT(appKey);
 
-    if (stored && stored.address === accounts.bsc.address) {
-      // 检查 token 是否过期
-      if (isJWTExpired(stored.token)) {
-        clearStoredJWT(appKey);
-        setJwtToken(null);
-      } else {
-        setJwtToken(stored.token);
-        setupExpirationTimer(stored.token);
-      }
-    } else if (stored && stored.address !== accounts.bsc.address) {
-      console.log('Wallet address mismatch, clear JWT token.', stored.address, accounts.bsc.address);
-      // 地址不匹配，清除旧的 token
-      clearStoredJWT(appKey);
+    if (stored && stored.address === accounts.bsc.address && !isJWTExpired(stored.token)) {
+      setJwtToken(stored.token);
+      setupExpirationTimer(stored.token);
+    } else {
       setJwtToken(null);
+      clearStoredJWT(appKey);
     }
 
     setInitialized(true);
-  }, [initialized, accounts.bsc, isLoggingOutProcessing, setupExpirationTimer, appKey]);
+  }, [status]);
 
   // 当钱包断开连接时，清除 JWT token
   useEffect(() => {
-    if (isLoggingOutProcessing) return;
+    if (status !== Status.AUTHENTICATED) return;
 
-    if (!accounts.bsc.address && jwtToken) {
-      console.log('Wallet disconnected, JWT token cleared.', accounts.bsc.address, accounts.bsc.status);
-      // 清除定时器
+    if (!accounts.bsc.address) {
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;
@@ -183,89 +178,77 @@ export const WalletKitAuthProvider = ({
       clearStoredJWT(appKey);
       setJwtToken(null);
     }
-  }, [accounts.bsc.address, jwtToken, isLoggingOutProcessing]);
+  }, [status]);
 
   useEffect(() => {
-    if (isLoggingOutProcessing) return;
-    if (accounts.bsc.status !== 'connected') return;
+    if (status !== Status.WAITING_FOR_AUTHENTICATION) return;
 
+    (async () => {
+      try {
+        setIsSigningInProcessing(true);
 
-    if (initialized && accounts.bsc.address && !jwtToken) {
+        // 3. 从后端获取签名消息和 nonce
+        const { message, nonce } = await getSignMessage(url,accounts.bsc.address);
 
-      (async () => {
-        try {
-          // 2. 等待钱包连接
-          if (!accounts.bsc.address) {
-            throw new Error('Wallet not connected');
-          }
-
-          setIsSigningInProcessing(true);
-
-          // 3. 从后端获取签名消息和 nonce
-          const { message, nonce } = await getSignMessage(url,accounts.bsc.address);
-
-          // 4. 使用钱包签名消息
-          // wagmi 的 signMessage 会自动从 config 中获取 provider
-          if (!config) {
-            throw new Error('Wagmi config not available');
-          }
-
-          const signature = await signMessage(config, {
-            message,
-            account: accounts.bsc.address as Address,
-          });
-
-          // 5. 发送签名到后端 API 获取 JWT token
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              type: 'mutate',
-              action: 'auth:signin',
-              payload: {
-                address: accounts.bsc.address,
-                message,
-                signature,
-                nonce,
-              },
-            }),
-          });
-
-          if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(error.error || 'Failed to sign in');
-          }
-
-          const data = await response.json();
-          const result = data.data as { token: string; address: string; };
-
-          // 6. 存储 JWT token
-          storeJWT(appKey, result.token, result.address);
-          setJwtToken(result.token);
-          setupExpirationTimer(result.token);
-
-          onSignInSuccess?.();
-
-          return result;
-        } catch (error) {
-          disconnect();
-          console.error('Sign in error:', error);
-          throw error;
-        } finally {
-          setIsSigningInProcessing(false);
+        // 4. 使用钱包签名消息
+        // wagmi 的 signMessage 会自动从 config 中获取 provider
+        if (!config) {
+          throw new Error('Wagmi config not available');
         }
-      })();
 
-    }
-  }, [initialized, accounts.bsc, jwtToken, isLoggingOutProcessing, setupExpirationTimer]);
+        const signature = await signMessage(config, {
+          message,
+          account: accounts.bsc.address as Address,
+        });
+
+        // 5. 发送签名到后端 API 获取 JWT token
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'mutate',
+            action: 'auth:signin',
+            payload: {
+              address: accounts.bsc.address,
+              message,
+              signature,
+              nonce,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(error.error || 'Failed to sign in');
+        }
+
+        const data = await response.json();
+        const result = data.data as { token: string; address: string; };
+
+        // 6. 存储 JWT token
+        storeJWT(appKey, result.token, result.address);
+        setJwtToken(result.token);
+        setupExpirationTimer(result.token);
+
+        onSignInSuccess?.();
+
+        return result;
+      } catch (error) {
+        disconnect();
+        console.error('Sign in error:', error);
+        throw error;
+      } finally {
+        setIsSigningInProcessing(false);
+      }
+    })();
+
+  }, [status]);
 
   // 组件卸载时清理定时器
   useEffect(() => {
     return () => {
-      setInitialized(false);
-
       if (expirationTimerRef.current) {
         clearTimeout(expirationTimerRef.current);
         expirationTimerRef.current = null;
